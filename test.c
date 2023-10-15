@@ -3,12 +3,13 @@
 //#include "intersection.c"
 #include "search.c"
 #include "printIntsFromFile.c"
+#include "BuildRTreebySTR.c"
 
 int main() {
     // Testing the correct generation of file of rectangles.
     printf("--------------\n");
     int n = 10;
-    generateRectangleFile("rect_test.bin", n, 0, 500, 0, 10);
+    generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
 
     FILE *file;
     char filename[] = "rect_test.bin";
@@ -26,6 +27,16 @@ int main() {
     }
 
     fclose(file);
+
+    // Testing the third construction method.
+    printf("--------------\n");
+    char filename_m3[] = "tree_3.bin";
+    buildRTreebySTR(filename, filename_m3, 2, n);
+    printf("Tree 3 successfully generated\n");
+    FILE *file_m3;
+    file_m3 = fopen(filename_m3, "rb");
+    printIntsFromFile(filename_m3, 6);
+
 
     // Testing the correct result from an intersection of two rectangles.
     printf("--------------\n");
