@@ -6,7 +6,9 @@
 #include "BuildRTreebySTR.c"
 
 int main() {
-    // Testing the correct generation of file of rectangles.
+    // ======== Testing the correct generation of file of rectangles. ========
+    printf("--------------\n");
+    printf("Testing the correct generation of file of rectangles.\n");
     printf("--------------\n");
     int n = 10;
     generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
@@ -28,7 +30,9 @@ int main() {
 
     fclose(file);
 
-    // Testing the third construction method.
+    // ======== Testing the third construction method. ========
+    printf("--------------\n");
+    printf("Testing the third construction method.\n");
     printf("--------------\n");
     char filename_m3[] = "tree_3.bin";
     buildRTreebySTR(filename, filename_m3, 2, n);
@@ -38,7 +42,10 @@ int main() {
     printIntsFromFile(filename_m3, 6);
 
 
-    // Testing the correct result from an intersection of two rectangles.
+
+    // ======== Testing the correct result from an intersection of two rectangles. ========
+    printf("--------------\n");
+    printf("Testing the correct result from an intersection of two rectangles.\n");
     printf("--------------\n");
     printf("Positive tests...\n");
     int bool1 = Intersection(1, 1, 5, 5, 2, 2, 4, 4); // First rectangle contains second.
@@ -55,7 +62,9 @@ int main() {
     int bool5 = Intersection(1, 1, 5, 5, 10, 10, 20, 20); // Non-intersecting rectangles.
     printf("Non-intersecting rectangles test: %d \n", bool5);
 
-    // Testing the correct search of a rectangle in a tree.
+    // ======== Testing the correct search of a rectangle in a tree. ========
+    printf("--------------\n");
+    printf("Testing the correct search of a rectangle in a tree.\n");
     printf("--------------\n");
     printf("Search test...\n");
 
