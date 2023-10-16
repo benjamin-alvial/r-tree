@@ -10,8 +10,8 @@
 int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, int N);
 void insertarOrdenadoX(int* Objetivo, int ptr_obj, int* Pozo, int S, int M, int N);
 void insertarOrdenadoY(int* Objetivo, int ptr_obj, int* Pozo,int inicioPozo, int finalPozo, int N);
-void guardarHoja(int* Objetivo, int inicio, int M, FILE* archivoGuardado, long* pos_Actual);
-void CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, int* N_cambiable,int M, int N);
+void guardarHoja(int* Objetivo, int inicio, int M, FILE* archivoGuardado, int* pos_Actual);
+int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, int* pos_Actual, int* N_cambiable,int M, int N);
 
 int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, int N) {
 
@@ -226,10 +226,10 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, int 
         return 1;
     }
 
-    long* pos_Actual;
+    int* pos_Actual;
     long* pos_Busqueda;
     pos_Busqueda = (long*)malloc(sizeof(long));
-    pos_Actual = (long*)malloc(sizeof(long));
+    pos_Actual = (int*)malloc(sizeof(int));
     *pos_Busqueda = sizeof(int)*(4+M);
 
     
@@ -307,7 +307,7 @@ void insertarOrdenadoY(int* Objetivo, int ptr_obj, int* Pozo,int inicioPozo, int
     Pozo[pos+4] = -1;
 }
 
-void guardarHoja(int* Objetivo, int inicio, int M, FILE* archivoGuardado, long* pos_Actual) {
+void guardarHoja(int* Objetivo, int inicio, int M, FILE* archivoGuardado, int* pos_Actual) {
     // esta función guarda todas las hojas de Objetivo con rectangulos desde inicio hasta inico + M en archivoGuardado
     // Primero buscamos los 4 puntos de la hoja
     int Xmayor = 0;
@@ -344,41 +344,120 @@ void guardarHoja(int* Objetivo, int inicio, int M, FILE* archivoGuardado, long* 
     free(hoja);
 }
 
-void CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, int* N_cambiable,int M, int N) { // el S_cambiable es el nuevo N 
-    // Creamos array de los nodos anteriores
-    int* Z = (int*) malloc(*N_cambiable * sizeof(int)*5) ;  // Array para almacenar los enteros
-    int num_elementos = 0; 
+int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, int* pos_Actual, int* N_cambiable,int M, int N) { // el S_cambiable es el nuevo N 
+    
+    FILE* archivoIntermedio2;
+    char* nombreArchivoIntermedio2 = "intermedio2.bin";
 
-    while (num_elementos < *N_cambiable*5 && *pos_Busqueda < *pos_Actual) { // Conseguimos que Z sea un array con los rectangulos del archivo
-        fseek(archivoGuardado,*pos_Busqueda,SEEK_SET);
-        fread(&Z[num_elementos], sizeof(int), 4, archivoGuardado);
-        num_elementos += 4;
-        Z[num_elementos] = (int) *pos_Busqueda; 
-        *pos_Busqueda = *pos_Busqueda + (M+4*sizeof(int));
-        num_elementos ++;
+    // Abrir el archivo de entrada en modo lectura binaria
+    //archivoEntrada = fopen(dirArchivoEntrada, "rb");
+    //if (archivoEntrada == NULL) {
+    //    perror("Error al abrir el archivo de entrada");
+    //    return 1;
+    //}
+
+    // Abrir el archivo de salida en modo escritura binaria
+    archivoIntermedio2 = fopen(nombreArchivoIntermedio2, "wb");
+    if (archivoIntermedio2 == NULL) {
+        perror("Error al abrir el archivo de salida");
+        fclose(archivoIntermedio2);
+        return 1;
     }
-    // Ahora basicamente hacemos lo mismo que antes
-    int S = pow(*N_cambiable/M,0.5);
 
+    int buffer2[4];  // Buffer para almacenar los enteros
+    //int indice = -1;
+    // Leer y escribir enteros en grupos de TAMANO_GRUPO
+    fseek(archivoGuardado,*pos_Busqueda,SEEK_SET);
+    while (fread(buffer2, sizeof(int), 4, archivoGuardado) == 4) {
+        fwrite(buffer2, sizeof(int), 4, archivoIntermedio2);
+        fwrite(pos_Busqueda,sizeof(int),1,archivoIntermedio2);
+        pos_Busqueda+=5;
+        fseek(archivoGuardado, sizeof(int)*M,SEEK_CUR);
+        
+    }
+
+    // Cerrar los archivos
+    fclose(archivoGuardado);
+    fclose(archivoIntermedio2);
+
+
+    FILE *archivo = fopen(nombreArchivoIntermedio2, "rb");
+
+    // Check if the file was opened successfully
+    if (archivo == NULL) {
+        fprintf(stderr, "Error opening file\n");
+        return 1;
+    }
+
+    // Get the size of the file
+    fseek(archivo, 0, SEEK_END);
+    long file_size = ftell(archivo);
+    fseek(archivo, 0, SEEK_SET);
+
+    // Calculate the number of integers in the file
+    size_t num_integers = file_size / sizeof(int);
+
+    // Allocate memory for the array using malloc
+    int *Z = (int *)malloc(num_integers * sizeof(int));
+
+    // Check if malloc was successful
+    if (Z == NULL) {
+        fprintf(stderr, "Error allocating memory\n");
+        fclose(archivo);
+        return 1;
+    }
+
+    // Read integers from the file into the array
+    fread(Z, sizeof(int), num_integers, archivo);
+
+    // Close the file
+    fclose(archivo);
+
+    printf("number of ints: %ld\n", num_integers);
+    printf("N_cambiable: %d\n", *N_cambiable);
+    printf("number of rects: %d\n", N);
+
+    // Creamos array de los nodos anteriores
+    //int* Z = (int*) malloc(*N_cambiable * sizeof(int)*5) ;  // Array para almacenar los enteros
+    //int num_elementos = 0; 
+
+    //while (num_elementos < *N_cambiable*5 && *pos_Busqueda < *pos_Actual) { // Conseguimos que Z sea un array con los rectangulos del archivo
+    //    fseek(archivoGuardado,*pos_Busqueda,SEEK_SET);
+    //    fread(&Z[num_elementos], sizeof(int), 4, archivoGuardado);
+    //    num_elementos += 4;
+    //    Z[num_elementos] = (int) *pos_Busqueda; 
+    //    *pos_Busqueda = *pos_Busqueda + (M+4*sizeof(int));
+    //    num_elementos ++;
+    //}
+    // Ahora basicamente hacemos lo mismo que antes
+    
+    int S = pow(*N_cambiable/M,0.5);
     //Creamos un Array nuevo para almacenar los elementos ahora Ordenados por la coordenada X en grupos de S*M
     int* Y = (int*) malloc(*N_cambiable * sizeof(int)*5) ;
 
     //Metemos para cada grupo de S*M elementos los rectangulos ordenados por su coordenada X
-    for(int v = 0; v < S; v++){     // Dato curioso, aqui vamos a recorrer todo el array pero quedó con doble for por una estructura pasada XD
-        for(int t = 0; t < S*M;t++){
-            insertarOrdenadoX(Y,((v*S*M)+t)*5,Z,S,M, N); // Aqui no estoy seguro si a la dirección se le suman esos numeros por el sizeof(int) o como está
-        }
+    for(int v = 0; v < *N_cambiable; v++){     // Dato curioso, aqui vamos a recorrer todo el array pero quedó con doble for por una estructura pasada XD
+        //for(int t = 0; t < S*M;t++){
+            insertarOrdenadoX(Y,v*5,Z,S,M, N); // Aqui no estoy seguro si a la dirección se le suman esos numeros por el sizeof(int) o como está
+        //}
     }
 
     // Array para Ordenar por Y--> actualmente están ordenados por X y se busca separarlos en grupos de S*M antes de ordenarlos por Y
     int* X = (int*) malloc(*N_cambiable * sizeof(int)*5) ;
 
     // Le insertamos los elementos ordenados por Y
-    for(int a = 0; a < S; a++){
+    for(int a = 0; a < S; a++){ 
         for(int b = 0; b < S*M; b++){
-            insertarOrdenadoY( X, ((a*S*M)+ b)*5, Y, a*S*M, (a*S*M) + (S*M), N);
+            insertarOrdenadoY( X, ((a*S*M)+ b)*5, Y, a*S*M, (a*S*M) + (S*M), *N_cambiable);
         }
     }
+    for(int c = 0; c < N-S*S*M;c++){
+        insertarOrdenadoY(X,((S*S*M)+c)*5,Y,S*S*M,*N_cambiable,*N_cambiable);
+        //insertarOrdenadoY(X,((S*S*M)+c)*5,Y,S*S*M,(S*S*M)+N,N);
+    }
+
+
+
 
     // Ahora estos son los nodos nuevos, toca guardarlos en un archivo
     //Ahora tenemos S*S nodos con M rectangulos c/u
@@ -428,5 +507,6 @@ void CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, int
         fclose(archivoGuardado);
     }
     *N_cambiable = *N_cambiable/M;
+    return 0;
 
 }
