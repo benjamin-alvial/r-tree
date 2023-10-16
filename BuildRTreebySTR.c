@@ -140,7 +140,7 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, int 
     //int Y[92][92*124] = malloc(N*sizeof(int)*4);
 
     //Creamos un Array nuevo para almacenar los elementos ahora Ordenados por la coordenada X en grupos de S*M
-    int* Y = (int*) malloc(N * sizeof(int)*4) ;
+    int* Y = (int*) malloc(N * sizeof(int)*5) ;
 
     printf("Integers from the array YYYYY: ");
     for (int i = 0; i < N*sizeof(int)*5; i++) {
@@ -181,25 +181,32 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, int 
     int* X = (int*) malloc(N * sizeof(int)*5) ;
     printf("CHECKPOINT2222: \n");
     // Le insertamos los elementos ordenados por Y
-    for(int a = 0; a < S; a++){
+    for(int a = 0; a < S; a++){ 
+        printf("grupo: %d\n", a);
         for(int b = 0; b < S*M; b++){
             printf("valor de b: %d\n", b);
+            printf("valor de a*S*M+b: %d\n", a*S*M+b);
             insertarOrdenadoY( X, ((a*S*M)+ b)*5, Y, a*S*M, (a*S*M) + (S*M), N);
         }
     }
 
 
+    //a=grupo
+    //b=lugar donde se escribe x
+
     for(int c = 0; c < N-S*S*M;c++){
-        insertarOrdenadoY(X,((S*S*M)+c)*5,Y,S*S*M,(S*S*M)+N,N);
+        insertarOrdenadoY(X,((S*S*M)+c)*5,Y,S*S*M,N,N);
+        //insertarOrdenadoY(X,((S*S*M)+c)*5,Y,S*S*M,(S*S*M)+N,N);
     }
 
     printf("Integers from the ordered by Y array: \n");
     for (int i = 0; i < N; ++i) {
         // Extracting coordinates for the current rectangle
-        int x1 = X[i * 4];
-        int y1 = X[i * 4 + 1];
-        int x2 = X[i * 4 + 2];
-        int y2 = X[i * 4 + 3];
+        int x1 = X[i * 5];
+        int y1 = X[i * 5 + 1];
+        int x2 = X[i * 5 + 2];
+        int y2 = X[i * 5 + 3];
+        int ind = X[i * 5 + 4];
 
         // Calculating center coordinates
         int centerX = (x1 + x2) / 2;
@@ -274,19 +281,25 @@ void insertarOrdenadoY(int* Objetivo, int ptr_obj, int* Pozo,int inicioPozo, int
     int pos = 999999999; // posición del elegido
     int xd = 999999999;
 
-    for(int a = inicioPozo; a < finalPozo*5;a += 5){ // buscamos el elemento de menor centro en Y para agregar a Objetivo
-        if(Pozo[a] > -1){
-            if((Pozo[a+1] + Pozo[a+3])/2 < xd){
-                pos = a; 
-                xd=(Pozo[a+1] + Pozo[a+3])/2;
+    for(int a = inicioPozo; a < finalPozo;a ++){ // buscamos el elemento de menor centro en Y para agregar a Objetivo
+        //printf("CHECKPOINT valor de aaaaaaa: %d\n", a);
+        if(Pozo[a*5] > -1){
+            if((Pozo[a*5+1] + Pozo[a*5+3])/2 < xd){
+                pos = a*5; 
+                xd=(Pozo[a*5+1] + Pozo[a*5+3])/2;
             }
         }
     }
+    //printf("CHECKPOINT inicio y final: %d, %d\n", inicioPozo, finalPozo);
+    //printf("VALOR DE POZO : %d, %d, %d, %d, %d. \n", Pozo[pos], Pozo[pos+1], Pozo[pos+2], Pozo[pos+3], Pozo[pos+4]);
+    //printf("CHECKPOINT objetivo Y con ptr_obj: %d\n", ptr_obj);
+    //printf("CHECKPOINT pozo Y con pos: %d\n", pos);
     Objetivo[ptr_obj  ] = Pozo[pos];
     Objetivo[ptr_obj+1] = Pozo[pos+1];
     Objetivo[ptr_obj+2] = Pozo[pos+2];
     Objetivo[ptr_obj+3] = Pozo[pos+3];
     Objetivo[ptr_obj+4] = Pozo[pos+4];
+    //printf("CHECKPOINT con valor de ptr_obj: %d\n", ptr_obj);
     Pozo[pos  ] = -1;
     Pozo[pos+1] = -1;
     Pozo[pos+2] = -1;
@@ -324,6 +337,7 @@ void guardarHoja(int* Objetivo, int inicio, int M, FILE* archivoGuardado, long* 
     hoja[3] = Ymayor;
     while(rectangulo < M+4){
         hoja[rectangulo] = Objetivo[inicio*(rectangulo-4)];
+        rectangulo++;
     }
     fwrite(hoja, sizeof(int), 4+M, archivoGuardado);
     *pos_Actual = ftell(archivoGuardado);
