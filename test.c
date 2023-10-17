@@ -3,14 +3,14 @@
 //#include "intersection.c"
 #include "search.c"
 #include "printIntsFromFile.c"
-#include "BuildRTreebySTR.c"
+#include "BuildRTreebySTR3.c"
 
 int main() {
     // ======== Testing the correct generation of file of rectangles. ========
     printf("--------------\n");
     printf("Testing the correct generation of file of rectangles.\n");
     printf("--------------\n");
-    int n = 10;
+    long n = 10;
     generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
 
     FILE *file;
@@ -22,10 +22,10 @@ int main() {
         return 1;
     }
 
-    int buffer[4];
-    while (fread(buffer, sizeof(int), 4, file) == 4) {
-        printf("%d %d %d %d\n", buffer[0], buffer[1], buffer[2], buffer[3]);
-        printf("Side lengths: %d, %d \n", buffer[2] - buffer[0], buffer[3] - buffer[1]);
+    long buffer[4];
+    while (fread(buffer, sizeof(long), 4, file) == 4) {
+        printf("%ld %ld %ld %ld\n", buffer[0], buffer[1], buffer[2], buffer[3]);
+        printf("Side lengths: %ld, %ld \n", buffer[2] - buffer[0], buffer[3] - buffer[1]);
     }
 
     fclose(file);
@@ -39,9 +39,13 @@ int main() {
     printf("Tree 3 successfully generated\n");
     FILE *file_m3;
     file_m3 = fopen(filename_m3, "rb");
+
+    if (file_m3 == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
     printIntsFromFile(filename_m3, 6);
-
-
 
     // ======== Testing the correct result from an intersection of two rectangles. ========
     printf("--------------\n");
@@ -52,15 +56,16 @@ int main() {
     int bool2 = Intersection(2, 2, 4, 4, 1, 1, 5, 5); // Second rectangle contains first.
     int bool3 = Intersection(1, 1, 4, 4, 2, 2, 5, 5); // Corner.
     int bool4 = Intersection(1, 1, 5, 5, 2, 0, 4, 2); // Line.
+    int bool5 = Intersection(1, 1, 2, 2, 1, 1, 2, 2); // Same rectangle.
     printf("First contains second test: %d \n", bool1);
     printf("Second contains first test: %d \n", bool2);
     printf("Corner test: %d \n", bool3);
     printf("Line test: %d \n", bool4);
+    printf("Same rectangle test: %d \n", bool5);
 
-    printf("--------------\n");
     printf("Negative tests...\n");
-    int bool5 = Intersection(1, 1, 5, 5, 10, 10, 20, 20); // Non-intersecting rectangles.
-    printf("Non-intersecting rectangles test: %d \n", bool5);
+    int bool6 = Intersection(1, 1, 5, 5, 10, 10, 20, 20); // Non-intersecting rectangles.
+    printf("Non-intersecting rectangles test: %d \n", bool6);
 
     // ======== Testing the correct search of a rectangle in a tree. ========
     printf("--------------\n");
@@ -70,7 +75,7 @@ int main() {
 
     int M = 2;
 
-    int R_data[] = {2, 2, 4, 4, 
+    long R_data[] = {2, 2, 4, 4, 
                     3, 3, 7, 7, 
                     2, 9, 5, 10, 
                     4, 10, 5, 12, 
@@ -79,9 +84,9 @@ int main() {
                     7, 7, 10, 9, 
                     8, 10, 10, 11};
 
-    int node_size = sizeof(int)*6;
+    long node_size = sizeof(long)*6;
 
-    int tree_data[] = {2, 1, 10, 12, node_size, 2*node_size,
+    long tree_data[] = {2, 1, 10, 12, node_size, 2*node_size,
                         2, 2, 5, 12, 3*node_size, 4*node_size,
                         6, 1, 10, 11, 5*node_size, 6*node_size,
                         2, 9, 5, 12, -3, -4,
@@ -96,7 +101,7 @@ int main() {
         fprintf(stderr, "Error opening file: %s\n", fileName_R);
         return 1;
     }
-    fwrite(R_data, sizeof(int), numElements_R, file_R);
+    fwrite(R_data, sizeof(long), numElements_R, file_R);
     fclose(file_R);
     printf("Data has been written to %s\n", fileName_R);
     printIntsFromFile(fileName_R, 4);
@@ -108,7 +113,7 @@ int main() {
         fprintf(stderr, "Error opening file: %s\n", fileName_tree);
         return 1;
     }
-    fwrite(tree_data, sizeof(int), numElements_tree, file_R);
+    fwrite(tree_data, sizeof(long), numElements_tree, file_R);
     fclose(file_tree);
     printf("Data has been written to %s\n", fileName_tree);
     printIntsFromFile(fileName_tree, 6);

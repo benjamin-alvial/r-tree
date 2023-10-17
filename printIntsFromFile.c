@@ -5,11 +5,11 @@ void printIntsFromFile(const char *filename, int x) {
 
     file = fopen(filename, "rb");  // Open the file in binary mode for reading
 
-    int num;
+    long num;
     int count = 0;
 
-    while (fread(&num, sizeof(int), 1, file) == 1) {
-        printf("%d ", num);
+    while (fread(&num, sizeof(long), 1, file) == 1) {
+        printf("%ld ", num);
         count++;
 
         if (count == x) {
