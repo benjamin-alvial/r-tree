@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include "printIntsFromFile.c"
+#include "generateRectangleFile.c"
 
 int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, long N);
 void insertarOrdenadoX(long* Objetivo, int ptr_obj, long* Pozo, long S, int M, long N);
 void insertarOrdenadoY(long* Objetivo, int ptr_obj, long* Pozo,int inicioPozo, int finalPozo, long N);
 void guardarHoja(long* Objetivo, int inicio, int M, FILE* archivoGuardado, long* pos_Actual);
-int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, long* N_cambiable,int M, long N);
+int CrearNodos(char* dirArchivoSalida, long* pos_Busqueda, long* pos_Actual, long* N_cambiable,int M, long N);
 
 int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, long N) {
 
@@ -65,6 +67,13 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, long
 
     // Calculate the number of integers in the file
     size_t num_longs = file_size / sizeof(long);
+    //Cte S
+    long S = pow((N/M),0.5); 
+
+    printf("number of longs: %ld\n", num_longs);
+    printf("number of rects: %ld\n", N);
+    printf("valor de S: %ld\n", S);
+    printf("----------VALOR DE SSM=%ld----------\n", S*S*M);
 
     // Allocate memory for the array using malloc
     long *Z = (long *)malloc(num_longs * sizeof(long));
@@ -79,54 +88,39 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, long
     // Read integers from the file into the array
     fread(Z, sizeof(long), num_longs, archivo);
 
+    printf("--------------------Longs from the array Z HOJAS:-------------------- \n");
+    for (int i = 0; i < N; i++) {
+        printf("RECTANGULO: %ld,%ld,%ld,%ld//%ld\n",Z[i*5+0],Z[i*5+1],Z[i*5+2],Z[i*5+3],Z[i*5+4]);
+    }
+
     // Close the file
     fclose(archivo);
-
-    printf("number of longs: %ld\n", num_longs);
-    printf("number of rects: %ld\n", N);
 
     /////////////////////////////////////////////////////////////////
     // Ordenamos por la coordenada X el array Z y lo guardamos en Y//
     /////////////////////////////////////////////////////////////////
 
-    //Cte S
-    long S = pow((N/M),0.5); 
-    printf("valor de S: %ld\n", S);
-    
     //Creamos un Array nuevo para almacenar los elementos ahora Ordenados por la coordenada X en grupos de S*M
     long* Y = (long*) malloc(N * sizeof(long)*5) ;
 
-    printf("Longs from the array YYYYY: ");
-    for (int i = 0; i < N*sizeof(long)*5; i++) {
-        printf("%ld ", Y[i]);
-    }
-
     //Metemos para cada grupo de S*M elementos los rectangulos ordenados por su coordenada X
-    for(int v = 0; v < N; v++){  
+    printf("---------------EMPIEZA LA INSERCIÓN SEGÚN X----------------\n");
+    for(int v = 0; v < N; v++){
+        printf("----------ITERACIÓN : %d----------\n",v+1);  
         insertarOrdenadoX(Y,v*5,Z,S,M,N);
     } 
 
-    printf("VALOR DE SSM=%ld\n", S*S*M);
-
-    printf("--------------\n");
-    printf("Integers from the ordered by X array: \n");
-    for (int i = 0; i < N; ++i) {
-        // Extracting coordinates for the current rectangle
+    printf("--------------------Longs from the array Y HOJAS: order by X-------------------- \n");
+    for (int i = 0; i < N; i++) {
         long x1 = Y[i * 5];
         long y1 = Y[i * 5 + 1];
         long x2 = Y[i * 5 + 2];
         long y2 = Y[i * 5 + 3];
         long ind = Y[i * 5 + 4];
-
-        // Calculating center coordinates
         long centerX = (x1 + x2) / 2;
         long centerY = (y1 + y2) / 2;
-
-        // Printing the information
-        printf("Rectangle %d: (%ld, %ld, %ld, %ld) - Center: (%ld, %ld)\n", i + 1, x1, y1, x2, y2, centerX, centerY);
+        printf("RECTANGULO: %ld,%ld,%ld,%ld//%ld  - Center: (%ld, %ld) \n",Y[i*5+0],Y[i*5+1],Y[i*5+2],Y[i*5+3],Y[i*5+4],centerX,centerY);
     }
-
-    printf("CHECKPOINT: \n");
 
     /////////////////////////////////////////////////////////////////
     // Ordenamos por la coordenada Y el array Y y lo guardamos en X//
@@ -134,7 +128,7 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, long
 
     // Array para Ordenar por Y--> actualmente están ordenados por X y se busca separarlos en grupos de S*M antes de ordenarlos por Y
     long* X = (long*) malloc(N * sizeof(long)*5) ;
-    printf("CHECKPOINT2222: \n");
+
     // Le insertamos los elementos ordenados por Y
     for(int a = 0; a < S; a++){ 
         for(int b = 0; b < S*M; b++){
@@ -145,7 +139,7 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, long
         insertarOrdenadoY(X,((S*S*M)+c)*5,Y,S*S*M,N,N);
     }
 
-    printf("Integers from the ordered by Y array: \n");
+    printf("--------------------Longs from array X: order by Y, groups of %ld:-------------------- \n",S*M);
     for (int i = 0; i < N; ++i) {
         // Extracting coordinates for the current rectangle
         long x1 = X[i * 5];
@@ -181,25 +175,17 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, long
     //////////////////////////////////////////////////////////
     //Ahora teniendo ordenado por X e Y, guardamos las hojas//
     //////////////////////////////////////////////////////////
-
+    printf("--------------------------------------------------\n");
     fseek(archivoGuardado, *pos_Busqueda, SEEK_SET);
     for(int a = 0; a <= S*S; a++){
-        printf("algo xd\n");
+        printf("Insertada Hoja %d\n",a+1);
         guardarHoja(X, a, M, archivoGuardado,pos_Actual); // Esta función debería guardar la hoja con los punteros a los M rectangulos
     }
-
-
-
-
-
-
+    // Tarea Terminada, Cerramos el archivo 
     fclose(archivoGuardado);
 
-
-
-
-
-    printf("PROBANDO A VER SI SE PUSIERON BIEN LAS HOJAS\n");
+    // Chequeamos que se hayan guardado bien
+    printf("--------------------INFO GUARDADA EN HOJAS--------------------\n");
     FILE *fileXD = fopen(dirArchivoSalida, "rb");
 
     // Check if the file was opened successfully
@@ -217,24 +203,25 @@ int buildRTreebySTR(char *dirArchivoEntrada, char *dirArchivoSalida, int M, long
     // Close the file
     fclose(fileXD);
 
-
-
-
-
-
-    long NumNodosActuales = N/M;
+    printf("\n");
+    long NumNodosActuales = N;
+    if(NumNodosActuales%M > 0) {
+        NumNodosActuales = (NumNodosActuales/M)+1;
+    }
+    else {
+        NumNodosActuales =  NumNodosActuales/M;
+    }
     free(X);
     free(Y);
     free(Z);
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //Teniendo los nodos hoja guardados en un archivo a partir de ellos creamos nodos y los guardamos hasta tener una raiz//
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     while(NumNodosActuales > 1){
-        archivoGuardado = fopen(dirArchivoSalida, "rb");
-        CrearNodos(archivoGuardado,pos_Busqueda,pos_Actual,&NumNodosActuales,M, N);
-        printf("--------numero nodos ctuales: %ld\n", NumNodosActuales);
+        printf("-----------------------Valor Nodos Actuales PRE CREAR NODOS: %ld-----------------------------------\n",NumNodosActuales);
+        CrearNodos(dirArchivoSalida,pos_Busqueda,pos_Actual,&NumNodosActuales,M, N);
+        printf("-----------------------Valor Nodos Actuales POST CREAR NODOS: %ld-----------------------------------\n", NumNodosActuales);
     }
 
     return 0;
@@ -244,7 +231,6 @@ void insertarOrdenadoX(long* Objetivo, int ptr_obj, long* Pozo, long S, int M, l
     //Esta función agrega a Objetivo el nodo de menor valor medio de la coordenada X, del Array Pozo y lo elimina de este (ahora vale -1 y no va a contar para los siguientes usos)
     int pos = 999999999; // posición del elegido
     int xd = 999999999; // menor valor medio de X
-
     for(int a = 0; a < N*5 ;a += 5){ // buscamos el elemento de menor centro en X para agregar a Objetivo
         if(Pozo[a] > -1){
             printf("RECTANGULO: %ld, %ld, %ld, %ld\n", Pozo[a], Pozo[a+1], Pozo[a+2], Pozo[a+3]);
@@ -331,8 +317,9 @@ void guardarHoja(long* Objetivo, int inicio, int M, FILE* archivoGuardado, long*
     free(hoja);
 }
 
-int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, long* N_cambiable,int M, long N) { // el N_cambiable es el nuevo N 
+int CrearNodos(char* dirArchivoSalida, long* pos_Busqueda, long* pos_Actual, long* N_cambiable,int M, long N) { // el N_cambiable es el nuevo N 
     
+    FILE* archivoGuardado = fopen(dirArchivoSalida, "rb");
     FILE* archivoIntermedio2;
     char* nombreArchivoIntermedio2 = "intermedio2.bin";
 
@@ -352,24 +339,24 @@ int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, long
     long pos_Busqueda2 = *pos_Busqueda;
 
     long buffer2[4];  // Buffer para almacenar los longs
-    printf("posicion de busqueda: %ld \n", *pos_Busqueda);
+    printf("--------------------Posicion de busqueda Nodos Anteriores: %ld-------------------- \n", *pos_Busqueda);
     fseek(archivoGuardado,*pos_Busqueda,SEEK_SET); // punteroa en posicion de busqueda
     int NodosLeidos = 0;
     while (NodosLeidos < *N_cambiable) { // Leemos tantos nodos como los Nodos del nivel posterior ya creados
         fread(buffer2, sizeof(long), 4, archivoGuardado); // leemos 4 numeros
         fwrite(buffer2, sizeof(long), 4, archivoIntermedio2); // escribimos en el archivo intermedio los 4 longs
         fwrite(&pos_Busqueda2,sizeof(long),1,archivoIntermedio2); // escribimos como quinto elemento el puntero al nodo
-        pos_Busqueda2+=M*sizeof(long);// la posición de busqueda se mueve M longs hasta el siguiente nodo
+        pos_Busqueda2+=(4+M)*sizeof(long);// la posición de busqueda se mueve M longs hasta el siguiente nodo
         fseek(archivoGuardado, sizeof(long)*M,SEEK_CUR); // movemos el cursor del archivo con los nodos guardados M longs
         NodosLeidos++; 
-        printf("BUFFFER: \n");
+        printf("BUFFFER:");
         for (int i = 0; i < 4; i++) {
-            printf("%ld ", buffer2[i]);
+            printf("%ld--", buffer2[i]);
         }
+        printf("\n");
         
     }
-
-
+    *pos_Busqueda = *pos_Busqueda + (4+M)*sizeof(long)*(*N_cambiable);
 
     // Cerrar los archivos
     fclose(archivoGuardado);
@@ -412,19 +399,16 @@ int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, long
     fread(Z, sizeof(long), num_integers, archivo);
 
 
-    printf("Longs from the array ZZZZZZ: ");
-    for (int i = 0; i < (*N_cambiable)*5; i++) {
-        printf("%ld ", Z[i]);
+    printf("--------------------Longs from the array Z NODOS:-------------------- \n");
+    for (int i = 0; i < *N_cambiable; i++) {
+        printf("RECTANGULO: %ld,%ld,%ld,%ld//%ld\n",Z[i*5+0],Z[i*5+1],Z[i*5+2],Z[i*5+3],Z[i*5+4]);
     }
-
-
 
     // Close the file
     fclose(archivo);
 
-    printf("number of ints: %ld\n", num_integers);
-    printf("N_cambiable: %ld\n", *N_cambiable);
-    printf("number of rects: %ld\n", N);
+    printf("--------------------Numero Actual de Longs: %ld--------------------\n", num_integers);
+    printf("--------------------N_cambiable: %ld--------------------\n", *N_cambiable);
 
     long S = pow(*N_cambiable/M,0.5);
     //Creamos un Array nuevo para almacenar los elementos ahora Ordenados por la coordenada X en grupos de S*M
@@ -437,10 +421,21 @@ int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, long
     //Metemos para cada grupo de S*M elementos los rectangulos ordenados por su coordenada X
     for(int v = 0; v < *N_cambiable; v++){     // Dato curioso, aqui vamos a recorrer todo el array pero quedó con doble for por una estructura pasada XD
         insertarOrdenadoX(Y,v*5,Z,S,M, *N_cambiable); // Aqui no estoy seguro si a la dirección se le suman esos numeros por el sizeof(int) o como está
-        printf("AAADHADOAJWDOAJDO?AWJDOAWJDJWOA\n");
+        printf("--------------------ITERACIÓN: %d--------------------\n", v);
     }
 
-    
+    printf("--------------------Longs from the array Y NODOS: order by X-------------------- \n");
+    for (int i = 0; i < *N_cambiable; i++) {
+        long x1 = Y[i * 5];
+        long y1 = Y[i * 5 + 1];
+        long x2 = Y[i * 5 + 2];
+        long y2 = Y[i * 5 + 3];
+        long ind = Y[i * 5 + 4];
+        long centerX = (x1 + x2) / 2;
+        long centerY = (y1 + y2) / 2;
+        printf("RECTANGULO: %ld,%ld,%ld,%ld//%ld  - Center: (%ld, %ld) \n",Y[i*5+0],Y[i*5+1],Y[i*5+2],Y[i*5+3],Y[i*5+4],centerX,centerY);
+    }
+
     // Array para Ordenar por Y--> actualmente están ordenados por X y se busca separarlos en grupos de S*M antes de ordenarlos por Y
     long* X = (long*) malloc(num_integers* sizeof(long));
 
@@ -455,61 +450,127 @@ int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, long
         }
     }
 
-    printf("SDOSJSOJOSJDJSOOSDJ\n");
     for(int c = 0; c < *N_cambiable-S*S*M;c++){
-        printf("SDOSJSOJOSJDJSOOSDJ ESTA ES LA ITERACION CON c=%d\n", c);
         insertarOrdenadoY(X,((S*S*M)+c)*5,Y,S*S*M,*N_cambiable,*N_cambiable);
     }
 
-
+    printf("--------------------Longs from the array X NODOS: order by Y-------------------- \n");
+    for (int i = 0; i < *N_cambiable; i++) {
+        long x1 = X[i * 5];
+        long y1 = X[i * 5 + 1];
+        long x2 = X[i * 5 + 2];
+        long y2 = X[i * 5 + 3];
+        long ind = X[i * 5 + 4];
+        long centerX = (x1 + x2) / 2;
+        long centerY = (y1 + y2) / 2;
+        printf("RECTANGULO: %ld,%ld,%ld,%ld//%ld  - Center: (%ld, %ld) \n",X[i*5+0],X[i*5+1],X[i*5+2],X[i*5+3],X[i*5+4],centerX,centerY);
+    }
 
     // Ahora estos son los nodos nuevos, toca guardarlos en un archivo
     //Ahora tenemos S*S nodos con M rectangulos c/u
-    for(int a = 0; a < S*S; a++){
+    int N_especial;
+
+    if(*N_cambiable%M > 0) {
+        N_especial = (*N_cambiable/M)+1;
+    }
+    else {
+        N_especial =  *N_cambiable/M;
+    }
+
+    archivoGuardado = fopen(dirArchivoSalida, "wb");
+    for(int a = 0; a < N_especial; a++){
         // este for guarda todos los nodos de X 
         // Primero buscamos los 4 puntos de la hoja
-        int Xmayor = 0;
-        int Xmenor = 999999999;
-        int Ymayor = 0; 
-        int Ymenor = 999999999;
-        for(int ptr = 0; ptr < M; ptr++){ // buscamos X e Y mayor y menor
-            if(X[ a*(M*5)+(ptr*5)    ] < Xmenor){
-                Xmenor = X[a*(M*5)+(ptr*5)];
+        long Xmayor = 0;
+        long Xmenor = 999999999;
+        long Ymayor = 0; 
+        long Ymenor = 999999999;
+        if(a == N_especial-1){ // si estamos en el ultimo Nodo a guardar
+            if(*N_cambiable%M > 0){ // y los nodos actuales  al dividirse en M grupos dejan al ultimo grupo con menos nodos
+                for(int ptr = 0; ptr < *N_cambiable%M; ptr++){ // buscamos X e Y mayor y menor
+                    if(X[ a*(M*5)+(ptr*5)    ] < Xmenor){
+                        Xmenor = X[a*(M*5)+(ptr*5)];
+                    }
+                    if(X[ a*(M*5)+(ptr*5) + 1] < Ymenor){
+                        Ymenor = X[a*(M*5)+(ptr*5) + 1];
+                    }
+                    if(X[ a*(M*5)+(ptr*5) + 2] > Xmayor){
+                        Xmayor = X[a*(M*5)+(ptr*5) + 2];
+                    }
+                    if(X[ a*(M*5)+(ptr*5) + 3] > Ymayor){
+                        Ymayor = X[a*(M*5)+(ptr*5) + 3];
+                    }
+                }
             }
-            if(X[ a*(M*5)+(ptr*5) + 1] < Ymenor){
-                Ymenor = X[a*(M*5)+(ptr*5) + 1];
-            }
-            if(X[ a*(M*5)+(ptr*5) + 2] > Xmayor){
-                Xmayor = X[a*(M*5)+(ptr*5) + 2];
-            }
-            if(X[ a*(M*5)+(ptr*5) + 3] > Ymayor){
-                Ymayor = X[a*(M*5)+(ptr*5) + 3];
+            if(N_especial == 1){
+                for(int ptr = 0; ptr < M-*N_cambiable%M; ptr++){ // buscamos X e Y mayor y menor
+                    if(X[ a*(M*5)+(ptr*5)    ] < Xmenor){
+                        Xmenor = X[a*(M*5)+(ptr*5)];
+                    }
+                    if(X[ a*(M*5)+(ptr*5) + 1] < Ymenor){
+                        Ymenor = X[a*(M*5)+(ptr*5) + 1];
+                    }
+                    if(X[ a*(M*5)+(ptr*5) + 2] > Xmayor){
+                        Xmayor = X[a*(M*5)+(ptr*5) + 2];
+                    }
+                    if(X[ a*(M*5)+(ptr*5) + 3] > Ymayor){
+                        Ymayor = X[a*(M*5)+(ptr*5) + 3];
+                    }
+                }
             }
         }
+        else{
+            for(int ptr = 0; ptr < M; ptr++){ // buscamos X e Y mayor y menor
+                if(X[ a*(M*5)+(ptr*5)    ] < Xmenor){
+                    Xmenor = X[a*(M*5)+(ptr*5)];
+                }
+                if(X[ a*(M*5)+(ptr*5) + 1] < Ymenor){
+                    Ymenor = X[a*(M*5)+(ptr*5) + 1];
+                }
+                if(X[ a*(M*5)+(ptr*5) + 2] > Xmayor){
+                    Xmayor = X[a*(M*5)+(ptr*5) + 2];
+                }
+                if(X[ a*(M*5)+(ptr*5) + 3] > Ymayor){
+                    Ymayor = X[a*(M*5)+(ptr*5) + 3];
+                }
+            }
+        }
+        printf("RECTANGULO A GUARDAR: %ld,%ld,%ld,%ld \n",Xmenor,Ymenor,Xmayor,Ymayor);
         // Teniendo los representates de la hoja toca escribir en el archivo los 4 puntos representantes y los punteros a los rectangulos
-        int* nodo = (int*) malloc(sizeof(int)*(M+4)) ;
+        long* nodo = (long*) malloc(sizeof(long)*(M+4)) ;
         int rectangulo = 4;
         nodo[0] = Xmenor;
         nodo[1] = Ymenor;
         nodo[2] = Xmayor;
         nodo[3] = Ymayor;
-        while(rectangulo < M+4){
-            nodo[rectangulo] = X[a*(M*5)+((rectangulo-4)*5)+4]; // pos_hijos-4 -> numero del hijo que estamos mirando
-            rectangulo++;                                       // multiplicamos por 5 por la cantidad para posicionarnos en el primer elemento del rectangulo
-        }                                                       // sumamos 4 para pasar del x1 -> puntero
 
-        if(S*S == 1){
-            fseek(archivoGuardado, 0 , SEEK_SET);
-            fwrite(nodo, sizeof(int), 4+M, archivoGuardado);
-            free(nodo);
-            break;
+        if(a == N_especial-1 && *N_cambiable%M > 0){
+                while(rectangulo < (*N_cambiable%M)+4){
+                    nodo[rectangulo] = X[(a*5*M)+(rectangulo-4)*5+4];
+                    rectangulo++;
+                }
         }
-        fseek(archivoGuardado, *pos_Actual, SEEK_SET);
-        fwrite(nodo, sizeof(int), 4+M, archivoGuardado);
-        *pos_Actual = ftell(archivoGuardado);
-        free(nodo);
-        fclose(archivoGuardado);
+        else{
+            while(rectangulo < M+4){
+                nodo[rectangulo] = X[(a*5*M)+(rectangulo-4)*5+4]; // a*M*5 --> Numero de longs que hay que saltarse para saltarnos M rectangulos
+                rectangulo++;                                      
+            }                                                       
+        }
+
+        if(*N_cambiable <= M){
+            fseek(archivoGuardado, 0 , SEEK_SET);
+            fwrite(nodo, sizeof(long), 4+M, archivoGuardado);
+            free(nodo);
+        }
+        else{
+            printf("----------------------------LA POSICION ACTUAL ES : %ld-----------------------------\n",*pos_Actual);
+            fseek(archivoGuardado, *pos_Actual, SEEK_SET);
+            fwrite(nodo, sizeof(long), 4+M, archivoGuardado);
+            *pos_Actual = ftell(archivoGuardado);
+            free(nodo);
+        }
     }
+    fclose(archivoGuardado);
 
     if(*N_cambiable%M > 0) {
         *N_cambiable = (*N_cambiable/M)+1;
@@ -520,4 +581,22 @@ int CrearNodos(FILE* archivoGuardado, long* pos_Busqueda, long* pos_Actual, long
 
     return 0;
 
+}
+
+int main() {
+    int M = 4;
+    int n = 20;
+
+    printf("Generation of rectangles for testing...\n");
+    printf("--------------\n");
+    generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
+    printIntsFromFile("rect_test.bin", 4);
+
+    char filename_m3[] = "tree_3.bin";
+    buildRTreebySTR("rect_test.bin", filename_m3, M, n);
+
+    printf("The tree has been successfully created.\n");
+    printIntsFromFile(filename_m3, M+4);    
+
+    return 0;
 }
