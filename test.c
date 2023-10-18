@@ -2,7 +2,7 @@
 #include "generateRectangleFile.c"
 //#include "intersection.c"
 #include "search.c"
-#include "printIntsFromFile.c"
+//#include "printIntsFromFile.c"
 
 int main() {
     // Testing the correct generation of file of rectangles.
