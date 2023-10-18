@@ -14,9 +14,12 @@ double searchRectangleFile(char *Q_file_name, char *tree_file_name, int M) {
     // Save the contents of the Q_file in an array.
     int *array_of_ints;
     Q_file = fopen(Q_file_name, "rb");
+    printf("DEBUGG\n");
     fseek(Q_file, 0, SEEK_END);
+
     int number_of_ints = ftell(Q_file) / sizeof(int);
     rewind(Q_file);
+
     array_of_ints = (int *) malloc(number_of_ints * sizeof(int));
     fread(array_of_ints , sizeof(int), number_of_ints, Q_file);
 

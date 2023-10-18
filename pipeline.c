@@ -1,6 +1,7 @@
 #include "generateRectangleFile.c"
 #include "search.c"
 #include "x-tree-2.c"
+#include "printIntsFromFile.c"
 
 // Powers of 2 for the size of original data rectangles
 #define N_POW_INITIAL 4 
@@ -42,13 +43,22 @@ int main() {
         generateRectangleFile("rect_R.bin", n, DOMAIN_MIN, DOMAIN_MAX, R_SIDE_MIN, R_SIDE_MAX);
         generateRectangleFile("rect_Q.bin", Q_AMOUNT, DOMAIN_MIN, DOMAIN_MAX, Q_SIDE_MIN, Q_SIDE_MAX);
 
-        createTreeMethodOne("rect_R.bin", n, M); // Creates the tree_1.bin file
+        printIntsFromFile("rect_R.bin", 4);
+        printf("----------\n");
+        printIntsFromFile("rect_Q.bin", 4);
+        printf("----------\n");
+
+        //createTreeMethodOne("rect_R.bin", n, M, "tree_1.bin"); // Creates the tree_1.bin file
         //createTreeMethodTwo("rect_R.bin", M); // Creates the tree_2.bin file
         //createTreeMethodThree("rect_R.bin", M); // Creates the tree_3.bin file
+
+
+        printIntsFromFile("tree_1.bin", 4+M);
         
-        //double time_1 = searchRectangleFile("rect_Q", "tree_1.bin", M);
-        //double time_2 = searchRectangleFile("rect_Q", "tree_2.bin", M);
-        //double time_3 = searchRectangleFile("rect_Q", "tree_3.bin", M);
+        double time_1 = searchRectangleFile("rect_Q.bin", "tree_1.bin", M);
+        //printf("time isss...... %lf\n", time_1);
+        //double time_2 = searchRectangleFile("rect_Q.bin", "tree_2.bin", M);
+        //double time_3 = searchRectangleFile("rect_Q.bin", "tree_3.bin", M);
 
         //fprintf(results_file, "%d, %lf, %lf, %lf\n", n, time_1, time_2, time_3); // To graph in another software
     }
