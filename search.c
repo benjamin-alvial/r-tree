@@ -14,7 +14,6 @@ double searchRectangleFile(char *Q_file_name, char *tree_file_name, int M) {
     // Save the contents of the Q_file in an array.
     int *array_of_ints;
     Q_file = fopen(Q_file_name, "rb");
-    printf("DEBUGG\n");
     fseek(Q_file, 0, SEEK_END);
 
     int number_of_ints = ftell(Q_file) / sizeof(int);
@@ -31,6 +30,7 @@ double searchRectangleFile(char *Q_file_name, char *tree_file_name, int M) {
     start_time = clock();
 
     for (int i=0; i < number_of_ints; i+=4) {
+        printf("RECTANGLE NUMBER %d OF Q...\n", i/4);
         int x1 = array_of_ints[i];
         int y1 = array_of_ints[i+1];
         int x2 = array_of_ints[i+2];
@@ -83,10 +83,13 @@ void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initi
 
     if (children_fp[0] < 0) { // Leaf
         for(int i =0; i<M; i++) { // Print each index of an intersected rectangle.
-            printf("Intersected rectangle at index %d\n", -children_fp[i]);
+            if (children_fp[i] < 0) {
+            printf("Intersected rectangle at index %d in R\n", -children_fp[i]);
             /*
             children_fp[k] = (-pos_index - 1)*sizeof(int); // Change -index to position in file.
             */
+            }
+            
         }
     }
 
