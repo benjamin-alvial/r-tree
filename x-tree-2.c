@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 //#include "generateRectangleFile.c"
-#include "printIntsFromFile.c"
+//#include "printIntsFromFile.c"
 
 // PART 1: ESTRUCTURA Y SORTING DE LOS RECTANGULOS INICIALES
 
@@ -161,11 +161,11 @@ Node *createParentNode(Node **childNodes, int M)
     return node;
 }
 
-Node *buildRTree(Rectangle *rectangles, int n, int M)
+Node *buildRTree(Rectangle *rectangles, int n, int M, char *tree_file_name)
 {
 
     FILE *final_tree;
-    final_tree = fopen("final_tree.bin", "wb");
+    final_tree = fopen(tree_file_name, "wb");
 
     if (final_tree == NULL) {
         printf("Error opening fileeeee\n");
@@ -259,18 +259,44 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
         numLeaves = numParents;
     }
 
+    fclose(final_tree);
+
+    FILE *final_tree2 = fopen("tree_1.bin", "rb+");
+
+     // Determine the size of the file
+    fseek(final_tree2, 0, SEEK_END);
+    long file_size = ftell(final_tree2);
+    printf("file size: %ld\n", file_size);
+
+    // Move back by the size of 8 integers
+    fseek(final_tree2, -(M+4) * sizeof(int), SEEK_END);
+
+    // Read the last 8 integers
+    int last_8_ints[M+4];
+    
+    fread(last_8_ints, sizeof(int), M+4, final_tree2);
+    
+    // Move back to the beginning of the file
+    fseek(final_tree2, 0, SEEK_SET);
+
+    // Write the last 8 integers to the beginning of the file
+    fwrite(last_8_ints, sizeof(int), M+4, final_tree2);
+    fclose(final_tree2);
+
     // La raiz del R-tree es el ultimo nodo
     Node *root = leafNodes[0];
-
+/*
     // Write the root node at the beginning of the file, first its coordinates
     fseek(final_tree, 0, SEEK_SET);
     int numbers_insert[] = {root->mbr.x1, root->mbr.y1, root->mbr.x2, root->mbr.y2};
     fwrite(numbers_insert, sizeof(int), 4, final_tree);
 
     // Write the positions of the root's children
+
     for (int j = 0; j<M; j++)
     {
         if(j < root->numChildren) {
+
             int posChild = (root->data.childNodes[j])->position;
             fwrite(&posChild, sizeof(int), 1, final_tree);
         }
@@ -280,7 +306,8 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
         }
                 
     }
-
+    printf("ESCRIBIR LA RAIZZZZ\n");
+*/
     //free(leafNodes);
     return root;
 }
@@ -307,10 +334,10 @@ int test_m1()
     printf("Generation of rectangles for testing...\n");
     printf("--------------\n");
     //generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
-    printIntsFromFile("rect_test.bin", 4);
+    //printIntsFromFile("rect_test.bin", 4);
 
     printf("-------------\n");
-    printIntsFromFile("final_tree.bin", M+4);
+    //printIntsFromFile("final_tree.bin", M+4);
 
     // Leer rectangulos del binario.
     Rectangle *rectangles = readRectangles("rect_test.bin", &n);
@@ -320,7 +347,7 @@ int test_m1()
 
     // Construir el R-tree con un M especifico
     
-    Node *root = buildRTree(rectangles, n, M);
+    Node *root = buildRTree(rectangles, n, M, "final_tree.bin");
     printf("-------------\n");
     printf("The tree has been successfully created.\n");
 
@@ -331,11 +358,15 @@ int test_m1()
     return 0;
 }
 
-int createTreeMethodOne(char *tree_file_name, int n, int M) {
+int createTreeMethodOne(char *R_file_name, int n, int M, char *tree_file_name) {
     // Leer rectangulos del binario.
-    Rectangle *rectangles = readRectangles(tree_file_name, &n);
+    Rectangle *rectangles = readRectangles(R_file_name, &n);
     // Ordenar los rectangulos por el centro de su coordenada X
     sortRectangles(rectangles, n);
     // Construir el R-tree con un M especifico
-    Node *root = buildRTree(rectangles, n, M);
+    Node *root = buildRTree(rectangles, n, M, tree_file_name);
+
+
+
+
 }
