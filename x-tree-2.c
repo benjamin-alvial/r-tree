@@ -23,6 +23,7 @@ typedef struct Node
     } data;
     int numChildren;
     int isLeaf;
+    int position; // posición donde se escribe en el archivo, en bytes
 } Node;
 
 int compareRectangles(const void *a, const void *b)
@@ -157,6 +158,7 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
     // Crear los nodos hojas
     for (int i = 0; i < numLeaves; i++)
     {
+        printf("-------------\n");
         printf("Creating leaf node %d\n", i);
 
         int remainingNodes = numLeaves - i * M;
@@ -167,15 +169,15 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
 
         printf("leaf rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2);
         int numbers_insert[4] = {leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2};
+        leafNodes[i]->position = ftell(final_tree);
         fwrite(numbers_insert, sizeof(int), 4, final_tree);
 
-        printf("pasooooo\n");
-        for (int k = 0; k < 4; k++)
-        {   
-            int idx = leafNodes[i]->mbr.index;
+        for (int j = 0; j < 4; j++)
+        {
+            int idx = leafNodes[i]->data.rectangles[j].index - 1; // Indices used in search start with 1
             fwrite(&idx, sizeof(int), 1, final_tree);
         }
-
+            
         for (int j = 0; j < 4; j++)
         {
             printf("Rectangulo %d de la hoja %d\n", j, i);
@@ -198,6 +200,7 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
 
         for (int i = 0; i < numParents; i++)
         {
+            printf("-------------\n");
             printf("Creating parent node %d\n", i);
 
             int remainingNodes = numLeaves - i * M;                          // Number de nodos faltantes para ser procesados
@@ -206,17 +209,54 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
             parentNodes[i] = createParentNode(leafNodes + i * M, nodesInThisNode);
             parentNodes[i]->mbr.index = i;
             printf("parent rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2);
+            int numbers_insert[4] = {parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2};
+            parentNodes[i]->position = ftell(final_tree);
+            
+            fwrite(numbers_insert, sizeof(int), 4, final_tree);
+            for (int j = 0; j<M; j++)
+            {
+                if(j < parentNodes[i]->numChildren) {
+                    int posChild = (parentNodes[i]->data.childNodes[j])->position;
+                    fwrite(&posChild, sizeof(int), 1, final_tree);
+                }
+                else {
+                    int noChild = -1;
+                    fwrite(&noChild, sizeof(int), 1, final_tree);
+                }
+                
+            }
+
+
         }
 
         // En la proxima iteracion, los nodos padres seran combinados en un nivel superior
-        free(leafNodes);
+        //free(leafNodes);
         leafNodes = parentNodes;
         numLeaves = numParents;
     }
 
     // La raiz del R-tree es el ultimo nodo
     Node *root = leafNodes[0];
-    free(leafNodes);
+    //free(leafNodes);
+
+    // Escribir la raíz... ir al inicio
+    fseek(final_tree, 0, SEEK_SET);
+    int numbers_insert[] = {root->mbr.x1, root->mbr.y1, root->mbr.x2, root->mbr.y2};
+    fwrite(numbers_insert, sizeof(int), 4, final_tree);
+
+    for (int j = 0; j<M; j++)
+            {
+                if(j < root->numChildren) {
+                    int posChild = (root->data.childNodes[j])->position;
+                    fwrite(&posChild, sizeof(int), 1, final_tree);
+                }
+                else {
+                    int noChild = -1;
+                    fwrite(&noChild, sizeof(int), 1, final_tree);
+                }
+                
+            }
+
     return root;
 }
 
@@ -387,41 +427,17 @@ void readAndPrintTree(const char *filename)
 int main()
 {
 
-
-
-
-    // ======== Testing the correct generation of file of rectangles. ========
-    printf("--------------\n");
-    printf("Testing the correct generation of file of rectangles.\n");
-    printf("--------------\n");
-    int n = 20;
-    generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
-
-    FILE *file;
-    char filename[] = "rect_test.bin";
-    file = fopen(filename, "rb");
-
-    if (file == NULL) {
-        perror("Error opening file");
-        return 1;
-    }
-
-    int buffer[4];
-    while (fread(buffer, sizeof(int), 4, file) == 4) {
-        printf("%d %d %d %d\n", buffer[0], buffer[1], buffer[2], buffer[3]);
-        printf("Side lengths: %d, %d \n", buffer[2] - buffer[0], buffer[3] - buffer[1]);
-    }
-
-    fclose(file);
-
-
-
-
-
-
     int M = 4;
-    
-    
+    int n = 20;
+
+    printf("Generation of rectangles for testing...\n");
+    printf("--------------\n");
+    generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
+    printIntsFromFile("rect_test.bin", 4);
+
+    printf("-------------\n");
+    printIntsFromFile("final_tree.bin", M+4);
+
     // Leer rectangulos del binario.
     Rectangle *rectangles = readRectangles("rect_test.bin", &n);
 
@@ -432,52 +448,7 @@ int main()
     // Construir el R-tree con un M especifico
     Node *root = buildRTree(rectangles, n, M);
 
-    printf("se creo al arbolXDD\n");
-    // Escribir la raíz al inicio del archivo
-    //fseek(final_tree, 0, SEEK_SET);
-    //int numbers_insert[] = {root->mbr.x1, root->mbr.y1, root->mbr.x2, root->mbr.y2};
-    //fwrite(numbers_insert, sizeof(int), 4, file);
-
-    // Se libera la memoria del arbol y los rectangulos guardados
-    //free(rectangles);
-    //freeTree(root);
-    fclose(final_tree);
-
-
-    printIntsFromFile("final_tree.bin", M+4);
-
-/*
-    // Leer rectangulos del binario.
-    Rectangle *rectangles = readRectangles("rect_test.bin", &n);
-
-    // Ordenar los rectangulos por el centro de su coordenada X
-    sortRectangles(rectangles, n);
-
-    for (int i = 0; i < 100; i++)
-    {
-        printf("x1: %d y1: %d x2: %d y2: %d index: %d\n", rectangles[i].x1, rectangles[i].y1, rectangles[i].x2, rectangles[i].y2, rectangles[i].index);
-    }
-
-    // Construir el R-tree con un M especifico
-    int M = 2;
-    Node *root = buildRTree(rectangles, n, M);
-
-    printf("ROOT:\n");
-    printf("x1: %d y1: %d x2: %d y2: %d \n", root->mbr.x1, root->mbr.y1, root->mbr.x2, root->mbr.y2);
-    printf("%d\n", root->isLeaf);
-    for (int i = 0; i < sizeof(root->data.childNodes); i++)
-    {
-        if (root->data.childNodes[i] == NULL)
-        {
-            break;
-        }
-        printf("Root child number %d\n", i);
-        printf("x1: %d y1: %d x2: %d y2: %d \n", root->data.childNodes[i]->mbr.x1, root->data.childNodes[i]->mbr.y1, root->data.childNodes[i]->mbr.x2, root->data.childNodes[i]->mbr.y2);
-    }
-
-    // Se libera la memoria del arbol y los rectangulos guardados
-    free(rectangles);
-    freeTree(root);
-*/
+    printf("The tree has been successfully created.\n");
+    
     return 0;
 }
