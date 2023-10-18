@@ -4,7 +4,7 @@
 
 // Powers of 2 for the size of original data rectangles
 #define N_POW_INITIAL 10 
-#define N_POW_FINAL 25
+#define N_POW_FINAL 10
 
 // Domain in which the rectangles are defined
 #define DOMAIN_MIN 0
@@ -22,7 +22,7 @@
 // Update according to computer architecture:
 // If B is the size of a memory block,
 // then M = P/sizeof(long) - 4
-#define M 124
+#define M 4
 
 int main() {
 
@@ -46,11 +46,12 @@ int main() {
         createTreeMethodTwo("rect_R.bin", M); // Creates the tree_2.bin file
         createTreeMethodThree("rect_R.bin", M); // Creates the tree_3.bin file
         
-        double time_1 = searchRectangleFile("rect_Q", "tree_1.bin", M);
-        double time_2 = searchRectangleFile("rect_Q", "tree_2.bin", M);
-        double time_3 = searchRectangleFile("rect_Q", "tree_3.bin", M);
+        //double time_1 = searchRectangleFile("rect_Q.bin", "tree_1.bin", M);
+        //double time_2 = searchRectangleFile("rect_Q.bin", "tree_2.bin", M);
+        //double time_3 = searchRectangleFile("rect_Q.bin", "tree_3.bin", M);
 
-        fprintf(results_file, "%ld, %lf, %lf, %lf\n", n, time_1, time_2, time_3); // To graph in another software
+        //fprintf(results_file, "%ld, %lf, %lf, %lf\n", n, time_3, time_3, time_3); // To graph in another software
+        //fprintf(results_file, "%ld, %lf, %lf, %lf\n", n, time_1, time_2, time_3); // To graph in another software
     }
 
     fclose(results_file);
