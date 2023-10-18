@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "generateRectangleFile.c"
+//#include "generateRectangleFile.c"
 #include "printIntsFromFile.c"
-
-
-FILE *final_tree;
 
 // PART 1: ESTRUCTURA Y SORTING DE LOS RECTANGULOS INICIALES
 
@@ -25,6 +22,35 @@ typedef struct Node
     int isLeaf;
     int position; // posición donde se escribe en el archivo, en bytes
 } Node;
+
+typedef struct
+{
+    int x, y;
+} Point;
+
+Point getCenter(Rectangle rect)
+{
+    Point center;
+    center.x = (rect.x1 + rect.x2) / 2;
+    center.y = (rect.y1 + rect.y2) / 2;
+    return center;
+}
+
+// Función de comparación para nodos basada en el centro de su MBR
+int compareNodeCenters(const void *a, const void *b)
+{
+    Node *nodeA = *(Node **)a;
+    Node *nodeB = *(Node **)b;
+    Point centerA = getCenter(nodeA->mbr);
+    Point centerB = getCenter(nodeB->mbr);
+    return centerA.x - centerB.x;
+}
+
+// Ordena nodos según el centro de su MBR
+void sortNodesByCenter(Node **nodes, int n)
+{
+    qsort(nodes, n, sizeof(Node *), compareNodeCenters);
+}
 
 int compareRectangles(const void *a, const void *b)
 {
@@ -66,7 +92,8 @@ Rectangle *readRectangles(const char *filename, int *n)
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    *n = fileSize / (4 * sizeof(int));
+    *n = fileSize / (4 * sizeof(int)); // Corrected the number of rectangles
+
     Rectangle *rectangles = (Rectangle *)malloc(*n * sizeof(Rectangle));
 
     for (int i = 0; i < *n; i++)
@@ -105,7 +132,6 @@ Node *createLeafNode(Rectangle *rectangles, int M)
         maxY = rectangles[i].y2 > maxY ? rectangles[i].y2 : maxY;
     }
 
-    //printf("minx and min x: %d, %d\n", minX, minY);
     node->mbr = (Rectangle){minX, minY, maxX, maxY, -1};
     return node;
 }
@@ -113,7 +139,6 @@ Node *createLeafNode(Rectangle *rectangles, int M)
 Node *createParentNode(Node **childNodes, int M)
 {
     Node *node = (Node *)malloc(sizeof(Node));
-    node->data.childNodes = childNodes; // Guardar los nodos hijos
     node->numChildren = M;
     node->isLeaf = 0;
 
@@ -150,9 +175,8 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
     // Saltarse la raíz por mientras
     fseek(final_tree, (M+4)*sizeof(int), SEEK_SET);
 
-
-    int numLeaves = n / M + n % M;
-    printf("%d\n", numLeaves);
+    int numLeaves = (n + M - 1) / M; // Corrected numLeaves calculation
+    // printf("%d\n", numLeaves);
     Node **leafNodes = (Node **)malloc(numLeaves * sizeof(Node *));
 
     // Crear los nodos hojas
@@ -168,28 +192,23 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
         leafNodes[i]->mbr.index = i;
 
         printf("leaf rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2);
+        
+        // Write the four coordinates of the leaf rectangle
         int numbers_insert[4] = {leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2};
         leafNodes[i]->position = ftell(final_tree);
         fwrite(numbers_insert, sizeof(int), 4, final_tree);
 
         for (int j = 0; j < 4; j++)
         {
+            // Write the indices of the leaf pointers to data rectangles
             int idx = leafNodes[i]->data.rectangles[j].index - 1; // Indices used in search start with 1
             fwrite(&idx, sizeof(int), 1, final_tree);
-        }
-            
-        for (int j = 0; j < 4; j++)
-        {
             printf("Rectangulo %d de la hoja %d\n", j, i);
-            printf("x1: %d y1: %d x2: %d y2: %d\n", leafNodes[i]->data.rectangles[j].x1, leafNodes[i]->data.rectangles[j].y1, leafNodes[i]->data.rectangles[j].x2, leafNodes[i]->data.rectangles[j].y2);
+            printf("x1: %d y1: %d x2: %d y2: %d index: %d\n", leafNodes[i]->data.rectangles[j].x1, leafNodes[i]->data.rectangles[j].y1, leafNodes[i]->data.rectangles[j].x2, leafNodes[i]->data.rectangles[j].y2, leafNodes[i]->data.rectangles[j].index);
         }
     }
 
-    // qsort(leafNodes, numLeaves, sizeof(Node*), compareMBRCenterX);
-    for (int i = 0; i < numLeaves; i++)
-    {
-        printf("MBR x1: %d y1: %d x2: %d y2: %d\n index %d\n", leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2, leafNodes[i]->mbr.index);
-    }
+    sortNodesByCenter(leafNodes, numLeaves);
 
     // Construir el R-tree
     while (numLeaves > 1)
@@ -208,10 +227,14 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
 
             parentNodes[i] = createParentNode(leafNodes + i * M, nodesInThisNode);
             parentNodes[i]->mbr.index = i;
+
             printf("parent rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2);
+            
+            // Write the four coordinates of the node rectangle
             int numbers_insert[4] = {parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2};
             parentNodes[i]->position = ftell(final_tree);
-            
+
+            // Write the positions in bytes of the node's children
             fwrite(numbers_insert, sizeof(int), 4, final_tree);
             for (int j = 0; j<M; j++)
             {
@@ -226,8 +249,9 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
                 
             }
 
-
         }
+
+        sortNodesByCenter(parentNodes, numParents);
 
         // En la proxima iteracion, los nodos padres seran combinados en un nivel superior
         //free(leafNodes);
@@ -237,26 +261,27 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
 
     // La raiz del R-tree es el ultimo nodo
     Node *root = leafNodes[0];
-    //free(leafNodes);
 
-    // Escribir la raíz... ir al inicio
+    // Write the root node at the beginning of the file, first its coordinates
     fseek(final_tree, 0, SEEK_SET);
     int numbers_insert[] = {root->mbr.x1, root->mbr.y1, root->mbr.x2, root->mbr.y2};
     fwrite(numbers_insert, sizeof(int), 4, final_tree);
 
+    // Write the positions of the root's children
     for (int j = 0; j<M; j++)
-            {
-                if(j < root->numChildren) {
-                    int posChild = (root->data.childNodes[j])->position;
-                    fwrite(&posChild, sizeof(int), 1, final_tree);
-                }
-                else {
-                    int noChild = -1;
-                    fwrite(&noChild, sizeof(int), 1, final_tree);
-                }
+    {
+        if(j < root->numChildren) {
+            int posChild = (root->data.childNodes[j])->position;
+            fwrite(&posChild, sizeof(int), 1, final_tree);
+        }
+        else {
+            int noChild = -1;
+            fwrite(&noChild, sizeof(int), 1, final_tree);
+        }
                 
-            }
+    }
 
+    //free(leafNodes);
     return root;
 }
 
@@ -273,166 +298,15 @@ void freeTree(Node *node)
     free(node);
 }
 
-void writeNode(FILE *file, Node *node, int *currentOffset)
-{
-    // Escribir MBR
-    fwrite(&(node->mbr.x1), sizeof(int), 1, file);
-    fwrite(&(node->mbr.y1), sizeof(int), 1, file);
-    fwrite(&(node->mbr.x2), sizeof(int), 1, file);
-    fwrite(&(node->mbr.y2), sizeof(int), 1, file);
-
-    if (node->isLeaf)
-    {
-        // Si es un nodo hoja, escribir los índices de sus rectángulos hijos
-        for (int i = 0; i < node->numChildren; i++)
-        {
-            fwrite(&(node->data.rectangles[i].index), sizeof(int), 1, file);
-        }
-    }
-    else
-    {
-        // Si no es un nodo hoja, escribir las posiciones (offsets) de sus hijos
-        // (inicialmente desconocidas, así que escribimos un valor temporal)
-        int tempOffset = -1;
-        for (int i = 0; i < node->numChildren; i++)
-        {
-            fwrite(&tempOffset, sizeof(int), 1, file);
-        }
-
-        // Recuerda la posición actual en el archivo
-        int returnPosition = ftell(file);
-
-        // Ahora, escribir cada hijo y actualizar la posición (offset) en el archivo
-        for (int i = 0; i < node->numChildren; i++)
-        {
-            // Ir a la posición donde deberíamos actualizar el offset
-            fseek(file, *currentOffset + sizeof(Rectangle) + i * sizeof(int), SEEK_SET);
-            fwrite(currentOffset, sizeof(int), 1, file); // Escribir el offset actual
-
-            // Regresar al final del archivo para continuar escribiendo
-            fseek(file, 0, SEEK_END);
-            writeNode(file, node->data.childNodes[i], currentOffset);
-            *currentOffset = ftell(file);
-        }
-
-        // Regresar a la posición después de este nodo
-        fseek(file, returnPosition, SEEK_SET);
-    }
-}
-
-void saveRTreeToFile(Node *root, const char *filename)
-{
-    FILE *file = fopen(filename, "wb");
-    if (!file)
-    {
-        fprintf(stderr, "Cannot open file %s for writing\n", filename);
-        return;
-    }
-
-    int currentOffset = sizeof(Rectangle);
-    writeNode(file, root, &currentOffset);
-
-    fclose(file);
-}
-
-Node *readNode(FILE *file, int offset, int M)
-{
-    fseek(file, offset, SEEK_SET);
-
-    Node *node = (Node *)malloc(sizeof(Node));
-
-    // Leer MBR
-    fread(&(node->mbr.x1), sizeof(int), 1, file);
-    fread(&(node->mbr.y1), sizeof(int), 1, file);
-    fread(&(node->mbr.x2), sizeof(int), 1, file);
-    fread(&(node->mbr.y2), sizeof(int), 1, file);
-
-    // Determinar si el nodo es una hoja o un nodo interno
-    int childOffset;
-    fread(&childOffset, sizeof(int), 1, file);
-
-    if (childOffset == -1)
-    {
-        // Es un nodo hoja
-        node->isLeaf = 1;
-        node->data.rectangles = (Rectangle *)malloc(M * sizeof(Rectangle)); // Asumiendo que M es una constante global
-        for (int i = 0; i < M; i++)
-        {
-            fread(&(node->data.rectangles[i].index), sizeof(int), 1, file);
-        }
-    }
-    else
-    {
-        // Es un nodo interno
-        node->isLeaf = 0;
-        node->data.childNodes = (Node **)malloc(M * sizeof(Node *));
-        for (int i = 0; i < M; i++)
-        {
-            node->data.childNodes[i] = readNode(file, childOffset, 4);
-            fread(&childOffset, sizeof(int), 1, file);
-        }
-    }
-
-    return node;
-}
-
-void printTree(Node *node, int depth, int M)
-{
-    // Indentar según la profundidad
-    for (int i = 0; i < depth; i++)
-    {
-        printf("  ");
-    }
-
-    // Imprimir el MBR del nodo
-    printf("MBR: [%d, %d, %d, %d]\n", node->mbr.x1, node->mbr.y1, node->mbr.x2, node->mbr.y2);
-
-    if (node->isLeaf)
-    {
-        // Si es un nodo hoja, imprimir los índices de los rectángulos
-        for (int i = 0; i < M; i++)
-        {
-            for (int j = 0; j < depth + 1; j++)
-            {
-                printf("  ");
-            }
-            printf("Rectangle Index: %d\n", node->data.rectangles[i].index);
-        }
-    }
-    else
-    {
-        // Si no es un nodo hoja, imprimir sus hijos (recursivamente)
-        for (int i = 0; i < M; i++)
-        {
-            printTree(node->data.childNodes[i], depth + 1, 4);
-        }
-    }
-}
-
-void readAndPrintTree(const char *filename)
-{
-    FILE *file = fopen(filename, "rb");
-    if (!file)
-    {
-        fprintf(stderr, "Cannot open file %s for reading\n", filename);
-        return;
-    }
-
-    Node *root = readNode(file, 0, 4);
-    fclose(file);
-
-    printTree(root, 0, 4);
-}
-
-int main()
+int test_m1()
 {
 
     int M = 4;
-    int n = 20;
+    int n = 100;
 
     printf("Generation of rectangles for testing...\n");
     printf("--------------\n");
-    generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
+    //generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
     printIntsFromFile("rect_test.bin", 4);
 
     printf("-------------\n");
@@ -444,11 +318,24 @@ int main()
     // Ordenar los rectangulos por el centro de su coordenada X
     sortRectangles(rectangles, n);
 
-    // Escribir las hojas y los nodos internos
+    // Construir el R-tree con un M especifico
+    
+    Node *root = buildRTree(rectangles, n, M);
+    printf("-------------\n");
+    printf("The tree has been successfully created.\n");
+
+    // Se libera la memoria del arbol y los rectangulos guardados
+    //free(rectangles);
+    //freeTree(root);
+
+    return 0;
+}
+
+int createTreeMethodOne(char *tree_file_name, int n, int M) {
+    // Leer rectangulos del binario.
+    Rectangle *rectangles = readRectangles(tree_file_name, &n);
+    // Ordenar los rectangulos por el centro de su coordenada X
+    sortRectangles(rectangles, n);
     // Construir el R-tree con un M especifico
     Node *root = buildRTree(rectangles, n, M);
-
-    printf("The tree has been successfully created.\n");
-    
-    return 0;
 }
