@@ -1,5 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "generateRectangleFile.c"
+#include "printIntsFromFile.c"
+
+
+FILE *final_tree;
 
 // PART 1: ESTRUCTURA Y SORTING DE LOS RECTANGULOS INICIALES
 
@@ -99,6 +104,7 @@ Node *createLeafNode(Rectangle *rectangles, int M)
         maxY = rectangles[i].y2 > maxY ? rectangles[i].y2 : maxY;
     }
 
+    //printf("minx and min x: %d, %d\n", minX, minY);
     node->mbr = (Rectangle){minX, minY, maxX, maxY, -1};
     return node;
 }
@@ -131,6 +137,19 @@ Node *createParentNode(Node **childNodes, int M)
 
 Node *buildRTree(Rectangle *rectangles, int n, int M)
 {
+
+    FILE *final_tree;
+    final_tree = fopen("final_tree.bin", "wb");
+
+    if (final_tree == NULL) {
+        printf("Error opening fileeeee\n");
+     // Exit with an error code
+    }
+
+    // Saltarse la raíz por mientras
+    fseek(final_tree, (M+4)*sizeof(int), SEEK_SET);
+
+
     int numLeaves = n / M + n % M;
     printf("%d\n", numLeaves);
     Node **leafNodes = (Node **)malloc(numLeaves * sizeof(Node *));
@@ -145,7 +164,18 @@ Node *buildRTree(Rectangle *rectangles, int n, int M)
 
         leafNodes[i] = createLeafNode(rectangles + i * M, nodesInThisNode);
         leafNodes[i]->mbr.index = i;
+
         printf("leaf rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2);
+        int numbers_insert[4] = {leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2};
+        fwrite(numbers_insert, sizeof(int), 4, final_tree);
+
+        printf("pasooooo\n");
+        for (int k = 0; k < 4; k++)
+        {   
+            int idx = leafNodes[i]->mbr.index;
+            fwrite(&idx, sizeof(int), 1, final_tree);
+        }
+
         for (int j = 0; j < 4; j++)
         {
             printf("Rectangulo %d de la hoja %d\n", j, i);
@@ -356,9 +386,69 @@ void readAndPrintTree(const char *filename)
 
 int main()
 {
+
+
+
+
+    // ======== Testing the correct generation of file of rectangles. ========
+    printf("--------------\n");
+    printf("Testing the correct generation of file of rectangles.\n");
+    printf("--------------\n");
+    int n = 20;
+    generateRectangleFile("rect_test.bin", n, 0, 100, 0, 5);
+
+    FILE *file;
+    char filename[] = "rect_test.bin";
+    file = fopen(filename, "rb");
+
+    if (file == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
+    int buffer[4];
+    while (fread(buffer, sizeof(int), 4, file) == 4) {
+        printf("%d %d %d %d\n", buffer[0], buffer[1], buffer[2], buffer[3]);
+        printf("Side lengths: %d, %d \n", buffer[2] - buffer[0], buffer[3] - buffer[1]);
+    }
+
+    fclose(file);
+
+
+
+
+
+
+    int M = 4;
+    
+    
     // Leer rectangulos del binario.
-    int n = 100;
-    Rectangle *rectangles = readRectangles("rect_R.bin", &n);
+    Rectangle *rectangles = readRectangles("rect_test.bin", &n);
+
+    // Ordenar los rectangulos por el centro de su coordenada X
+    sortRectangles(rectangles, n);
+
+    // Escribir las hojas y los nodos internos
+    // Construir el R-tree con un M especifico
+    Node *root = buildRTree(rectangles, n, M);
+
+    printf("se creo al arbolXDD\n");
+    // Escribir la raíz al inicio del archivo
+    //fseek(final_tree, 0, SEEK_SET);
+    //int numbers_insert[] = {root->mbr.x1, root->mbr.y1, root->mbr.x2, root->mbr.y2};
+    //fwrite(numbers_insert, sizeof(int), 4, file);
+
+    // Se libera la memoria del arbol y los rectangulos guardados
+    //free(rectangles);
+    //freeTree(root);
+    fclose(final_tree);
+
+
+    printIntsFromFile("final_tree.bin", M+4);
+
+/*
+    // Leer rectangulos del binario.
+    Rectangle *rectangles = readRectangles("rect_test.bin", &n);
 
     // Ordenar los rectangulos por el centro de su coordenada X
     sortRectangles(rectangles, n);
@@ -369,7 +459,7 @@ int main()
     }
 
     // Construir el R-tree con un M especifico
-    int M = 4;
+    int M = 2;
     Node *root = buildRTree(rectangles, n, M);
 
     printf("ROOT:\n");
@@ -388,6 +478,6 @@ int main()
     // Se libera la memoria del arbol y los rectangulos guardados
     free(rectangles);
     freeTree(root);
-
+*/
     return 0;
 }
