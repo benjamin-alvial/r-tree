@@ -90,7 +90,7 @@ void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initi
         }
     }
 
-    else { // Internal node
+    else if (children_fp[0] > 0) { // Internal node
         for(int i =0; i<M; i++) { // Search in recursion in subtree if need be.
             int child_fp = children_fp[i];
             if (child_fp != 0) { // 0 child means no child.
