@@ -243,7 +243,7 @@ Node *buildRTree(Rectangle *rectangles, int n, int M, char *tree_file_name)
                     fwrite(&posChild, sizeof(int), 1, final_tree);
                 }
                 else {
-                    int noChild = -1;
+                    int noChild = 0;
                     fwrite(&noChild, sizeof(int), 1, final_tree);
                 }
                 
