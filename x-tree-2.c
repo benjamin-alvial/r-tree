@@ -182,29 +182,35 @@ Node *buildRTree(Rectangle *rectangles, int n, int M, char *tree_file_name)
     // Crear los nodos hojas
     for (int i = 0; i < numLeaves; i++)
     {
-        printf("-------------\n");
-        printf("Creating leaf node %d\n", i);
+        //printf("-------------\n");
+        //printf("Creating leaf node %d\n", i);
 
         int remainingNodes = numLeaves - i * M;
         int nodesInThisNode = (remainingNodes < M) ? remainingNodes : M;
 
+        if(nodesInThisNode < 0) {
+            //printf("ERRORRRRR\n");
+
+        }
+
         leafNodes[i] = createLeafNode(rectangles + i * M, nodesInThisNode);
         leafNodes[i]->mbr.index = i;
 
-        printf("leaf rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2);
+        //printf("leaf rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2);
         
         // Write the four coordinates of the leaf rectangle
         int numbers_insert[4] = {leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2};
         leafNodes[i]->position = ftell(final_tree);
         fwrite(numbers_insert, sizeof(int), 4, final_tree);
 
-        for (int j = 0; j < 4; j++)
+        for (int j = 0; j < M; j++)
         {
-            // Write the indices of the leaf pointers to data rectangles
+
             int idx = leafNodes[i]->data.rectangles[j].index - 1; // Indices used in search start with 1
             fwrite(&idx, sizeof(int), 1, final_tree);
-            printf("Rectangulo %d de la hoja %d\n", j, i);
+            //printf("Rectangulo %d de la hoja %d\n", j, i);
             printf("x1: %d y1: %d x2: %d y2: %d index: %d\n", leafNodes[i]->data.rectangles[j].x1, leafNodes[i]->data.rectangles[j].y1, leafNodes[i]->data.rectangles[j].x2, leafNodes[i]->data.rectangles[j].y2, leafNodes[i]->data.rectangles[j].index);
+
         }
     }
 
@@ -214,13 +220,13 @@ Node *buildRTree(Rectangle *rectangles, int n, int M, char *tree_file_name)
     while (numLeaves > 1)
     {
         int numParents = (numLeaves + M - 1) / M;
-        printf("Num parents: %d\n", numParents);
+        //printf("Num parents: %d\n", numParents);
         Node **parentNodes = (Node **)malloc(numParents * sizeof(Node *));
 
         for (int i = 0; i < numParents; i++)
         {
-            printf("-------------\n");
-            printf("Creating parent node %d\n", i);
+            //printf("-------------\n");
+            //printf("Creating parent node %d\n", i);
 
             int remainingNodes = numLeaves - i * M;                          // Number de nodos faltantes para ser procesados
             int nodesInThisNode = (remainingNodes < M) ? remainingNodes : M; // Se usan los que quedan si son menos de M
@@ -228,7 +234,7 @@ Node *buildRTree(Rectangle *rectangles, int n, int M, char *tree_file_name)
             parentNodes[i] = createParentNode(leafNodes + i * M, nodesInThisNode);
             parentNodes[i]->mbr.index = i;
 
-            printf("parent rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2);
+            //printf("parent rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2);
             
             // Write the four coordinates of the node rectangle
             int numbers_insert[4] = {parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2};
