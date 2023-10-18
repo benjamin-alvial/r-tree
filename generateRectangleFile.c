@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 // Creates and saves a binary file with n rectangles.
 // Every four integers correspond to a rectangle's two vertices (x1, y1, x2, y2) that determine it.
