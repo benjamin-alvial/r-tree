@@ -7,29 +7,29 @@
 typedef struct
 {
     int x1, y1, x2, y2, index;
-} Rectangle;
+} RectangleH;
 
-typedef struct Node
+typedef struct NodeH
 {
-    Rectangle mbr;
+    RectangleH mbr;
     union
     {
-        struct Node **childNodes; // para nodos internos
-        Rectangle *rectangles;    // para nodos hoja
+        struct NodeH **childNodes; // para nodos internos
+        RectangleH *rectangles;    // para nodos hoja
     } data;
     int numChildren;
     int isLeaf;
     int position; // posición donde se escribe en el archivo, en bytes
-} Node;
+} NodeH;
 
 typedef struct
 {
     int x, y;
-} Point;
+} PointH;
 
 // Funciones auxiliares para calcular posición en la Curva de Hilbert
 
-static int rotate(int n, int x, int y, int rx, int ry)
+int rotate(int n, int x, int y, int rx, int ry)
 {
     if (ry == 0)
     {
@@ -56,9 +56,9 @@ int xy2d(int n, int x, int y)
     return d;
 }
 
-Point getCenter(Rectangle rect)
+PointH getCenterH(RectangleH rect)
 {
-    Point center;
+    PointH center;
     center.x = (rect.x1 + rect.x2) / 2;
     center.y = (rect.y1 + rect.y2) / 2;
     return center;
@@ -66,11 +66,11 @@ Point getCenter(Rectangle rect)
 
 int compareHilbertValue(const void *a, const void *b)
 {
-    Rectangle *rectA = (Rectangle *)a;
-    Rectangle *rectB = (Rectangle *)b;
+    RectangleH *rectA = (RectangleH *)a;
+    RectangleH *rectB = (RectangleH *)b;
 
-    Point centerA = getCenter(*rectA);
-    Point centerB = getCenter(*rectB);
+    PointH centerA = getCenterH(*rectA);
+    PointH centerB = getCenterH(*rectB);
 
     int d1 = xy2d(524288, centerA.x, centerA.y); // 524288 la potencia n^2 mas cercana al rango [0, 500000]
     int d2 = xy2d(524288, centerB.x, centerB.y);
@@ -78,12 +78,12 @@ int compareHilbertValue(const void *a, const void *b)
     return d1 - d2;
 }
 
-void sortRectanglesByHilbertValue(Rectangle *rectangles, int n)
+void sortRectanglesByHilbertValue(RectangleH *rectangles, int n)
 {
-    qsort(rectangles, n, sizeof(Rectangle), compareHilbertValue);
+    qsort(rectangles, n, sizeof(RectangleH), compareHilbertValue);
 }
 
-Rectangle *readRectangles(const char *filename, int *n)
+RectangleH *readRectanglesH(const char *filename, int *n)
 {
     FILE *file = fopen(filename, "rb");
     if (file == NULL)
@@ -98,7 +98,7 @@ Rectangle *readRectangles(const char *filename, int *n)
 
     *n = fileSize / (4 * sizeof(int));
 
-    Rectangle *rectangles = (Rectangle *)malloc(*n * sizeof(Rectangle));
+    RectangleH *rectangles = (RectangleH *)malloc(*n * sizeof(RectangleH));
 
     for (int i = 0; i < *n; i++)
     {
@@ -113,9 +113,9 @@ Rectangle *readRectangles(const char *filename, int *n)
     return rectangles;
 }
 
-Node *createLeafNode(Rectangle *rectangles, int M)
+NodeH*createLeafNodeH(RectangleH *rectangles, int M)
 {
-    Node *node = (Node *)malloc(sizeof(Node));
+    NodeH*node = (NodeH*)malloc(sizeof(Node));
     node->data.rectangles = rectangles;
     node->numChildren = M;
     node->isLeaf = 1;
@@ -133,13 +133,13 @@ Node *createLeafNode(Rectangle *rectangles, int M)
         maxY = rectangles[i].y2 > maxY ? rectangles[i].y2 : maxY;
     }
 
-    node->mbr = (Rectangle){minX, minY, maxX, maxY, -1};
+    node->mbr = (RectangleH){minX, minY, maxX, maxY, -1};
     return node;
 }
 
-Node *createParentNode(Node **childNodes, int M)
+NodeH*createParentNodeH(NodeH**childNodes, int M)
 {
-    Node *node = (Node *)malloc(sizeof(Node));
+    NodeH*node = (NodeH*)malloc(sizeof(Node));
     node->numChildren = M;
     node->isLeaf = 0;
 
@@ -156,19 +156,19 @@ Node *createParentNode(Node **childNodes, int M)
         maxY = childNodes[i]->mbr.y2 > maxY ? childNodes[i]->mbr.y2 : maxY;
     }
 
-    node->mbr = (Rectangle){minX, minY, maxX, maxY, -1};
+    node->mbr = (RectangleH){minX, minY, maxX, maxY, -1};
     node->data.childNodes = childNodes;
     return node;
 }
 
 int compareNodesByHilbertValue(const void *a, const void *b)
 {
-    Node *nodeA = *(Node **)a;
-    Node *nodeB = *(Node **)b;
+    NodeH*nodeA = *(NodeH**)a;
+    NodeH*nodeB = *(NodeH**)b;
     return nodeA->mbr.index - nodeB->mbr.index;
 }
 
-Node *buildRTree(Rectangle *rectangles, int n, int size, int M, char *tree_file_name)
+NodeH*buildRTreeH(RectangleH *rectangles, int n, int size, int M, char *tree_file_name)
 {
     FILE *final_tree;
     final_tree = fopen(tree_file_name, "wb");
@@ -182,17 +182,17 @@ Node *buildRTree(Rectangle *rectangles, int n, int size, int M, char *tree_file_
     fseek(final_tree, (M+4)*sizeof(int), SEEK_SET);
 
     int numNodes = (n + M - 1) / M;
-    Node **nodes = (Node **)malloc(numNodes * sizeof(Node *));
+    NodeH **nodes = (NodeH **)malloc(numNodes * sizeof(NodeH *));
 
     for (int i = 0; i < numNodes; i++)
     {
         int remainingRectangles = n - i * M;
         int rectanglesInThisNode = (remainingRectangles < M) ? remainingRectangles : M;
-        nodes[i] = createLeafNode(rectangles + i * M, rectanglesInThisNode);
-        Point center = getCenter(nodes[i]->mbr);
+        nodes[i] = createLeafNodeH(rectangles + i * M, rectanglesInThisNode);
+        PointH center = getCenterH(nodes[i]->mbr);
         nodes[i]->mbr.index = xy2d(size, center.x, center.y);
 
-        nodes[i] = createLeafNode(rectangles + i * M, rectanglesInThisNode);
+        nodes[i] = createLeafNodeH(rectangles + i * M, rectanglesInThisNode);
         nodes[i]->mbr.index = i;
 
         //printf("leaf rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2);
@@ -214,22 +214,22 @@ Node *buildRTree(Rectangle *rectangles, int n, int size, int M, char *tree_file_
 
     }
 
-    qsort(nodes, numNodes, sizeof(Node *), compareNodesByHilbertValue);
+    qsort(nodes, numNodes, sizeof(NodeH *), compareNodesByHilbertValue);
 
     while (numNodes > 1)
     {
         int numParents = (numNodes + M - 1) / M;
-        Node **parentNodes = (Node **)malloc(numParents * sizeof(Node *));
+        NodeH **parentNodes = (NodeH **)malloc(numParents * sizeof(NodeH *));
 
         for (int i = 0; i < numParents; i++)
         {
             int remainingNodes = numNodes - i * M;
             int nodesInThisNode = (remainingNodes < M) ? remainingNodes : M;
-            parentNodes[i] = createParentNode(nodes + i * M, nodesInThisNode);
-            Point center = getCenter(parentNodes[i]->mbr);
+            parentNodes[i] = createParentNodeH(nodes + i * M, nodesInThisNode);
+            PointH center = getCenterH(parentNodes[i]->mbr);
             parentNodes[i]->mbr.index = xy2d(size, center.x, center.y);
 
-            parentNodes[i] = createParentNode(nodes + i * M, nodesInThisNode);
+            parentNodes[i] = createParentNodeH(nodes + i * M, nodesInThisNode);
             parentNodes[i]->mbr.index = i;
 
             //printf("parent rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2);
@@ -255,7 +255,7 @@ Node *buildRTree(Rectangle *rectangles, int n, int size, int M, char *tree_file_
 
         }
 
-        qsort(parentNodes, numParents, sizeof(Node *), compareNodesByHilbertValue);
+        qsort(parentNodes, numParents, sizeof(NodeH *), compareNodesByHilbertValue);
 
         free(nodes);
         nodes = parentNodes;
@@ -286,18 +286,18 @@ Node *buildRTree(Rectangle *rectangles, int n, int size, int M, char *tree_file_
     fwrite(last_8_ints, sizeof(int), M+4, final_tree2);
     fclose(final_tree2);
 
-    Node *root = nodes[0];
+    NodeH *root = nodes[0];
     free(nodes);
     return root;
 }
 
-void freeTree(Node *node)
+void freeTreeH(NodeH *node)
 {
     if (!node->isLeaf)
     {
         for (int i = 0; i < node->numChildren; i++)
         {
-            freeTree(node->data.childNodes[i]);
+            freeTreeH(node->data.childNodes[i]);
         }
         free(node->data.childNodes);
     }
@@ -309,7 +309,7 @@ int test_m2()
 {
     int n = 100;
     int size = 524288;
-    Rectangle *rectangles = readRectangles("rect_R.bin", &n);
+    RectangleH *rectangles = readRectanglesH("rect_R.bin", &n);
 
     printIntsFromFile("rect_R.bin", 4);
 
@@ -318,19 +318,19 @@ int test_m2()
 
     printf("sort done\n");
     int M = 4;
-    Node *root = buildRTree(rectangles, n, size, M);
+    NodeH *root = buildRTreeH(rectangles, n, size, M);
 
     printf("tree done\n");
     //free(rectangles);
-    //freeTree(root);
+    //freeTreeH(root);
 
     return 0;
 }
 */
 
 int createTreeMethodTwo(char *R_file_name, int n, int M, char *tree_file_name) {
-    Rectangle *rectangles = readRectangles(R_file_name, &n);
+    RectangleH *rectangles = readRectanglesH(R_file_name, &n);
     sortRectanglesByHilbertValue(rectangles, n);
     int size = 524288;
-    Node *root = buildRTree(rectangles, n, size, M, tree_file_name);
+    NodeH *root = buildRTreeH(rectangles, n, size, M, tree_file_name);
 }
