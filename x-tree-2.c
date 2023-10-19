@@ -267,7 +267,7 @@ Node *buildRTree(Rectangle *rectangles, int n, int M, char *tree_file_name)
 
     fclose(final_tree);
 
-    FILE *final_tree2 = fopen("tree_1.bin", "rb+");
+    FILE *final_tree2 = fopen(tree_file_name, "rb+");
 
      // Determine the size of the file
     fseek(final_tree2, 0, SEEK_END);
