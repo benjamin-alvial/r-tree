@@ -3,6 +3,7 @@
 #include "x-tree-2.c"
 #include "printIntsFromFile.c"
 #include "hilbert-tree-2.c"
+#include "STR-ints.c"
 
 // There are two sets of rectangles.
 // The data rectangles set (R) has the original rectangle data points.
@@ -12,7 +13,7 @@
 // Number of data points (number of rectangles in R)
 // follow powers of 2 from N_POW_INITIAL to N_POW_FINAL
 #define N_POW_INITIAL 10
-#define N_POW_FINAL 14
+#define N_POW_FINAL 17
 
 // Number of queries (number of rectangles in Q)
 #define Q_AMOUNT 100
@@ -50,39 +51,50 @@ int main() {
     // Iterate over the values of n (powers of 2)
     for(int i=0; i<n_values_size; i++) {
         int n = n_values[i];
-        // Generate the data rectangles set (R) and the query rectangles set (Q)
-        generateRectangleFile("rect_R.bin", n, DOMAIN_MIN, DOMAIN_MAX, R_SIDE_MIN, R_SIDE_MAX);
-        printf("----- Set R of rectangles successfully created. -----\n");
-        printIntsFromFile("rect_R.bin", 4);
 
-        generateRectangleFile("rect_Q.bin", Q_AMOUNT, DOMAIN_MIN, DOMAIN_MAX, Q_SIDE_MIN, Q_SIDE_MAX);
+        char filename_R[20];
+        snprintf(filename_R, sizeof(filename_R), "rect_R_pow%d.bin", i+N_POW_INITIAL);
+        char filename_Q[20];
+        snprintf(filename_Q, sizeof(filename_Q), "rect_Q_pow%d.bin", i+N_POW_INITIAL);
+        char filename_T1[20];
+        snprintf(filename_T1, sizeof(filename_T1), "tree_1_pow%d.bin", i+N_POW_INITIAL);
+        char filename_T2[20];
+        snprintf(filename_T2, sizeof(filename_T2), "tree_2_pow%d.bin", i+N_POW_INITIAL);
+        char filename_T3[20];
+        snprintf(filename_T3, sizeof(filename_T3), "tree_3_pow%d.bin", i+N_POW_INITIAL);
+
+        // Generate the data rectangles set (R) and the query rectangles set (Q)
+        generateRectangleFile(filename_R, n, DOMAIN_MIN, DOMAIN_MAX, R_SIDE_MIN, R_SIDE_MAX);
+        printf("----- Set R of rectangles successfully created. -----\n");
+        printIntsFromFile(filename_R, 4);
+
+        generateRectangleFile(filename_Q, Q_AMOUNT, DOMAIN_MIN, DOMAIN_MAX, Q_SIDE_MIN, Q_SIDE_MAX);
         printf("----- Set Q of rectangles successfully created. -----\n");
-        printIntsFromFile("rect_Q.bin", 4);
+        printIntsFromFile(filename_Q, 4);
         
         // Generate the R-Tree with three different methods
-        createTreeMethodOne("rect_R.bin", n, M, "tree_1.bin");
+        createTreeMethodOne(filename_R, n, M, filename_T1);
         printf("----- Tree with method 1 (Nearest-X) successfully created. -----\n");
-        printIntsFromFile("tree_1.bin", 4+M);
+        printIntsFromFile(filename_T1, 4+M);
 
-        createTreeMethodTwo("rect_R.bin", n, M, "tree_2.bin"); // Creates the tree_2.bin file
+        createTreeMethodTwo(filename_R, n, M, filename_T2); // Creates the tree_2.bin file
         printf("----- Tree with method 2 (Hilbert Curve) successfully created. -----\n");
-        printIntsFromFile("tree_2.bin", 4+M);
+        printIntsFromFile(filename_T2, 4+M);
 
-        //createTreeMethodThree("rect_R.bin", M); // Creates the tree_3.bin file
-        //printf("----- Tree with method 3 (Sort-Tile-Recursive) successfully created. -----\n");
-        //printIntsFromFile("tree_3.bin", 4+M);
+        createTreeMethodThree(filename_R, n, M, filename_T3); // Creates the tree_3.bin file
+        printf("----- Tree with method 3 (Sort-Tile-Recursive) successfully created. -----\n");
+        printIntsFromFile(filename_T3, 4+M);
 
         // Queries of rectangles in Q are done for each tree and performance times are measured
-        double time_1 = searchRectangleFile("rect_Q.bin", "tree_1.bin", M);
+        double time_1 = searchRectangleFile(filename_Q, filename_T1, M);
         printf("----- Time taken for queries in first tree in seconds: %lf -----\n", time_1);
-        double time_2 = searchRectangleFile("rect_Q.bin", "tree_2.bin", M);
+        double time_2 = searchRectangleFile(filename_Q, filename_T2, M);
         printf("----- Time taken for queries in second tree in seconds: %lf -----\n", time_2);
-        //double time_3 = searchRectangleFile("rect_Q.bin", "tree_3.bin", M);
-        //printf("----- Time taken for queries in third tree in seconds: %lf -----\n", time_3);
+        double time_3 = searchRectangleFile(filename_Q, filename_T3, M);
+        printf("----- Time taken for queries in third tree in seconds: %lf -----\n", time_3);
 
         // Write performance data for each n and tree to plot elsewhere
-        fprintf(results_file, "%d, %lf, %lf\n", n, time_1, time_2);
-        //fprintf(results_file, "%d, %lf, %lf, %lf\n", n, time_1, time_2, time_3);
+        fprintf(results_file, "%d, %lf, %lf, %lf\n", n, time_1, time_2, time_3);
     }
 
     fclose(results_file);
