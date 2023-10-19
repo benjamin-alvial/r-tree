@@ -227,7 +227,7 @@ int main()
     int size = 524288;
     Rectangle *rectangles = readRectangles("rect_R.bin", &n);
 
-    sortRectanglesByHilbertValue(rectangles, 524288);
+    sortRectanglesByHilbertValue(rectangles, n);
 
     int M = 4;
     Node *root = buildRTree(rectangles, n, size, M);
