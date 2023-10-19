@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+//#include "printIntsFromFile.c"
 
 // Definición de estructuras
 
@@ -18,6 +19,7 @@ typedef struct Node
     } data;
     int numChildren;
     int isLeaf;
+    int position; // posición donde se escribe en el archivo, en bytes
 } Node;
 
 typedef struct
@@ -166,8 +168,19 @@ int compareNodesByHilbertValue(const void *a, const void *b)
     return nodeA->mbr.index - nodeB->mbr.index;
 }
 
-Node *buildRTree(Rectangle *rectangles, int n, int size, int M)
+Node *buildRTree(Rectangle *rectangles, int n, int size, int M, char *tree_file_name)
 {
+    FILE *final_tree;
+    final_tree = fopen(tree_file_name, "wb");
+
+    if (final_tree == NULL) {
+        printf("Error opening fileeeee\n");
+     // Exit with an error code
+    }
+
+    // Saltarse la raíz por mientras
+    fseek(final_tree, (M+4)*sizeof(int), SEEK_SET);
+
     int numNodes = (n + M - 1) / M;
     Node **nodes = (Node **)malloc(numNodes * sizeof(Node *));
 
@@ -178,6 +191,27 @@ Node *buildRTree(Rectangle *rectangles, int n, int size, int M)
         nodes[i] = createLeafNode(rectangles + i * M, rectanglesInThisNode);
         Point center = getCenter(nodes[i]->mbr);
         nodes[i]->mbr.index = xy2d(size, center.x, center.y);
+
+        nodes[i] = createLeafNode(rectangles + i * M, rectanglesInThisNode);
+        nodes[i]->mbr.index = i;
+
+        //printf("leaf rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, leafNodes[i]->mbr.x1, leafNodes[i]->mbr.y1, leafNodes[i]->mbr.x2, leafNodes[i]->mbr.y2);
+        
+        // Write the four coordinates of the leaf rectangle
+        int numbers_insert[4] = {nodes[i]->mbr.x1, nodes[i]->mbr.y1, nodes[i]->mbr.x2, nodes[i]->mbr.y2};
+        nodes[i]->position = ftell(final_tree);
+        fwrite(numbers_insert, sizeof(int), 4, final_tree);
+
+        for (int j = 0; j < M; j++)
+        {
+
+            int idx = nodes[i]->data.rectangles[j].index - 1; // Indices used in search start with 1
+            fwrite(&idx, sizeof(int), 1, final_tree);
+            //printf("Rectangulo %d de la hoja %d\n", j, i);
+            //printf("x1: %d y1: %d x2: %d y2: %d index: %d\n", leafNodes[i]->data.rectangles[j].x1, leafNodes[i]->data.rectangles[j].y1, leafNodes[i]->data.rectangles[j].x2, leafNodes[i]->data.rectangles[j].y2, leafNodes[i]->data.rectangles[j].index);
+
+        }
+
     }
 
     qsort(nodes, numNodes, sizeof(Node *), compareNodesByHilbertValue);
@@ -194,6 +228,31 @@ Node *buildRTree(Rectangle *rectangles, int n, int size, int M)
             parentNodes[i] = createParentNode(nodes + i * M, nodesInThisNode);
             Point center = getCenter(parentNodes[i]->mbr);
             parentNodes[i]->mbr.index = xy2d(size, center.x, center.y);
+
+            parentNodes[i] = createParentNode(nodes + i * M, nodesInThisNode);
+            parentNodes[i]->mbr.index = i;
+
+            //printf("parent rectangle %d: x1= %d y1 = %d x2= %d y2 = %d \n", i, parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2);
+            
+            // Write the four coordinates of the node rectangle
+            int numbers_insert[4] = {parentNodes[i]->mbr.x1, parentNodes[i]->mbr.y1, parentNodes[i]->mbr.x2, parentNodes[i]->mbr.y2};
+            parentNodes[i]->position = ftell(final_tree);
+
+            // Write the positions in bytes of the node's children
+            fwrite(numbers_insert, sizeof(int), 4, final_tree);
+            for (int j = 0; j<M; j++)
+            {
+                if(j < parentNodes[i]->numChildren) {
+                    int posChild = (parentNodes[i]->data.childNodes[j])->position;
+                    fwrite(&posChild, sizeof(int), 1, final_tree);
+                }
+                else {
+                    int noChild = 0;
+                    fwrite(&noChild, sizeof(int), 1, final_tree);
+                }
+                
+            }
+
         }
 
         qsort(parentNodes, numParents, sizeof(Node *), compareNodesByHilbertValue);
@@ -202,6 +261,30 @@ Node *buildRTree(Rectangle *rectangles, int n, int size, int M)
         nodes = parentNodes;
         numNodes = numParents;
     }
+
+    fclose(final_tree);
+
+    FILE *final_tree2 = fopen(tree_file_name, "rb+");
+
+     // Determine the size of the file
+    fseek(final_tree2, 0, SEEK_END);
+    long file_size = ftell(final_tree2);
+    printf("file size: %ld\n", file_size);
+
+    // Move back by the size of 8 integers
+    fseek(final_tree2, -(M+4) * sizeof(int), SEEK_END);
+
+    // Read the last 8 integers
+    int last_8_ints[M+4];
+    
+    fread(last_8_ints, sizeof(int), M+4, final_tree2);
+    
+    // Move back to the beginning of the file
+    fseek(final_tree2, 0, SEEK_SET);
+
+    // Write the last 8 integers to the beginning of the file
+    fwrite(last_8_ints, sizeof(int), M+4, final_tree2);
+    fclose(final_tree2);
 
     Node *root = nodes[0];
     free(nodes);
@@ -221,19 +304,33 @@ void freeTree(Node *node)
     free(node);
 }
 
-int main()
+/*
+int test_m2()
 {
     int n = 100;
     int size = 524288;
     Rectangle *rectangles = readRectangles("rect_R.bin", &n);
 
+    printIntsFromFile("rect_R.bin", 4);
+
+    printf("pre sort\n");
     sortRectanglesByHilbertValue(rectangles, n);
 
+    printf("sort done\n");
     int M = 4;
     Node *root = buildRTree(rectangles, n, size, M);
 
-    free(rectangles);
-    freeTree(root);
+    printf("tree done\n");
+    //free(rectangles);
+    //freeTree(root);
 
     return 0;
+}
+*/
+
+int createTreeMethodTwo(char *R_file_name, int n, int M, char *tree_file_name) {
+    Rectangle *rectangles = readRectangles(R_file_name, &n);
+    sortRectanglesByHilbertValue(rectangles, n);
+    int size = 524288;
+    Node *root = buildRTree(rectangles, n, size, M, tree_file_name);
 }
