@@ -209,7 +209,7 @@ Node *buildRTree(Rectangle *rectangles, int n, int M, char *tree_file_name)
             int idx = leafNodes[i]->data.rectangles[j].index - 1; // Indices used in search start with 1
             fwrite(&idx, sizeof(int), 1, final_tree);
             //printf("Rectangulo %d de la hoja %d\n", j, i);
-            printf("x1: %d y1: %d x2: %d y2: %d index: %d\n", leafNodes[i]->data.rectangles[j].x1, leafNodes[i]->data.rectangles[j].y1, leafNodes[i]->data.rectangles[j].x2, leafNodes[i]->data.rectangles[j].y2, leafNodes[i]->data.rectangles[j].index);
+            //printf("x1: %d y1: %d x2: %d y2: %d index: %d\n", leafNodes[i]->data.rectangles[j].x1, leafNodes[i]->data.rectangles[j].y1, leafNodes[i]->data.rectangles[j].x2, leafNodes[i]->data.rectangles[j].y2, leafNodes[i]->data.rectangles[j].index);
 
         }
     }
@@ -267,7 +267,7 @@ Node *buildRTree(Rectangle *rectangles, int n, int M, char *tree_file_name)
 
     fclose(final_tree);
 
-    FILE *final_tree2 = fopen("tree_1.bin", "rb+");
+    FILE *final_tree2 = fopen(tree_file_name, "rb+");
 
      // Determine the size of the file
     fseek(final_tree2, 0, SEEK_END);
@@ -371,8 +371,4 @@ int createTreeMethodOne(char *R_file_name, int n, int M, char *tree_file_name) {
     sortRectangles(rectangles, n);
     // Construir el R-tree con un M especifico
     Node *root = buildRTree(rectangles, n, M, tree_file_name);
-
-
-
-
 }

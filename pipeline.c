@@ -1,7 +1,8 @@
 #include "generateRectangleFile.c"
 #include "search.c"
-#include "x-tree-2.c"
+//#include "x-tree-2.c"
 #include "printIntsFromFile.c"
+#include "hilbert-tree-2.c"
 
 // There are two sets of rectangles.
 // The data rectangles set (R) has the original rectangle data points.
@@ -10,8 +11,8 @@
 
 // Number of data points (number of rectangles in R)
 // follow powers of 2 from N_POW_INITIAL to N_POW_FINAL
-#define N_POW_INITIAL 10
-#define N_POW_FINAL 25
+#define N_POW_INITIAL 6
+#define N_POW_FINAL 6
 
 // Number of queries (number of rectangles in Q)
 #define Q_AMOUNT 100
@@ -32,7 +33,7 @@
 // Then, B = (4+M)*sizeof(int) => M = B/sizeof(int) - 4.
 // In the machine used, B = 512 bytes, sizeof(int) = 4,
 // then M = 512/4 - 4 = 124
-#define M 124
+#define M 4
 
 int main() {
 
@@ -59,28 +60,28 @@ int main() {
         printIntsFromFile("rect_Q.bin", 4);
         
         // Generate the R-Tree with three different methods
-        createTreeMethodOne("rect_R.bin", n, M, "tree_1.bin");
-        printf("----- Tree with method 1 (Nearest-X) successfully created. -----\n");
-        printIntsFromFile("tree_1.bin", 4+M);
+        //createTreeMethodOne("rect_R.bin", n, M, "tree_1.bin");
+        //printf("----- Tree with method 1 (Nearest-X) successfully created. -----\n");
+        //printIntsFromFile("tree_1.bin", 4+M);
 
-        //createTreeMethodTwo("rect_R.bin", M); // Creates the tree_2.bin file
-        //printf("----- Tree with method 2 (Hilbert Curve) successfully created. -----\n");
-        //printIntsFromFile("tree_2.bin", 4+M);
+        createTreeMethodTwo("rect_R.bin", n, M, "tree_2.bin"); // Creates the tree_2.bin file
+        printf("----- Tree with method 2 (Hilbert Curve) successfully created. -----\n");
+        printIntsFromFile("tree_2.bin", 4+M);
 
         //createTreeMethodThree("rect_R.bin", M); // Creates the tree_3.bin file
         //printf("----- Tree with method 3 (Sort-Tile-Recursive) successfully created. -----\n");
         //printIntsFromFile("tree_3.bin", 4+M);
 
         // Queries of rectangles in Q are done for each tree and performance times are measured
-        double time_1 = searchRectangleFile("rect_Q.bin", "tree_1.bin", M);
-        printf("----- Time taken for queries in first tree in seconds: %lf -----\n", time_1);
-        //double time_2 = searchRectangleFile("rect_Q.bin", "tree_2.bin", M);
-        //printf("----- Time taken for queries in second tree in seconds: %lf -----\n", time_2);
+        //double time_1 = searchRectangleFile("rect_Q.bin", "tree_1.bin", M);
+        //printf("----- Time taken for queries in first tree in seconds: %lf -----\n", time_1);
+        double time_2 = searchRectangleFile("rect_Q.bin", "tree_2.bin", M);
+        printf("----- Time taken for queries in second tree in seconds: %lf -----\n", time_2);
         //double time_3 = searchRectangleFile("rect_Q.bin", "tree_3.bin", M);
         //printf("----- Time taken for queries in third tree in seconds: %lf -----\n", time_3);
 
         // Write performance data for each n and tree to plot elsewhere
-        fprintf(results_file, "%d, %lf, %lf, %lf\n", n, time_1, time_1, time_1);
+        //fprintf(results_file, "%d, %lf, %lf, %lf\n", n, time_1, time_1, time_1);
         //fprintf(results_file, "%d, %lf, %lf, %lf\n", n, time_1, time_2, time_3);
     }
 
