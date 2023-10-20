@@ -1,12 +1,12 @@
 #include <time.h>
 #include "intersection.c"
 
-void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initial_fp_pos, int M);
-double searchRectangleFile(char *Q_file_name, char *tree_file_name, int M);
+void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initial_fp_pos, int M, int *accesses);
+double searchRectangleFile(char *Q_file_name, char *tree_file_name, int M, int *accesses);
 
 // Searches the entirety of the rectangles in Q_file_name
 // in the tree saved in tree_file_name, returning the cpu time used.
-double searchRectangleFile(char *Q_file_name, char *tree_file_name, int M) {
+double searchRectangleFile(char *Q_file_name, char *tree_file_name, int M, int *accesses) {
 
     FILE *Q_file;
     FILE *tree_file;
@@ -36,7 +36,7 @@ double searchRectangleFile(char *Q_file_name, char *tree_file_name, int M) {
         int x2 = array_of_ints[i+2];
         int y2 = array_of_ints[i+3];
         // Search the rectangle in the root of the tree, at position 0 bytes.
-        searchRectangleInTree(x1, y1, x2, y2, tree_file, 0, M);
+        searchRectangleInTree(x1, y1, x2, y2, tree_file, 0, M, accesses);
     }
 
     end_time = clock();
@@ -61,7 +61,7 @@ struct searchResult {
 // representing positions in the file where its children are located.
 // The leaves point to the negative indices of rectangles in the original data R_rect file.
 // Negative numbers in leaves are used to identify leaves in recursion.
-void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initial_fp_pos, int M) {
+void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initial_fp_pos, int M, int *accesses) {
 //struct searchResult searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int intial_fp_pos, int M) {
 
     // Extract the rectangle's information at the given node.
@@ -84,7 +84,7 @@ void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initi
     if (children_fp[0] < 0) { // Leaf
         for(int i =0; i<M; i++) { // Print each index of an intersected rectangle.
             if (children_fp[i] < 0) {
-            printf("Intersected rectangle at index %d in R\n", -children_fp[i]);
+            //printf("Intersected rectangle at index %d in R\n", -children_fp[i]);
             /*
             children_fp[k] = (-pos_index - 1)*sizeof(int); // Change -index to position in file.
             */
@@ -102,6 +102,7 @@ void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initi
                 int x2_child;
                 int y2_child;
                 fseek(file, child_fp, SEEK_SET);
+                (*accesses) ++;
                 fread(&x1_child, sizeof(int), 1, file);
                 fread(&y1_child, sizeof(int), 1, file);
                 fread(&x2_child, sizeof(int), 1, file);
@@ -110,7 +111,7 @@ void searchRectangleInTree(int x1, int y1, int x2, int y2, FILE *file, int initi
                 int intersection_bool = Intersection(x1, y1, x2, y2, x1_child, y1_child, x2_child, y2_child);
 
                 if(intersection_bool == 1) {
-                    searchRectangleInTree(x1, y1, x2, y2, file, child_fp, M);
+                    searchRectangleInTree(x1, y1, x2, y2, file, child_fp, M, accesses);
                 }
 
             }
